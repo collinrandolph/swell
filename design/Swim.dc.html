@@ -697,6 +697,21 @@ class Component extends DCLogic {
     // Its bell pulses on the guide cycle (power stroke = "Breathe out"), its form follows the guide's rhythm
     // (same mapping as yours), its colour shows its beat, and it swims with the same impulse physics.
     var G = s.gj, eGs = Math.min(1, Math.max(0, (bpm - 4) / 6));
+    // A guide never arrives idle: before it appears, run its own swimming forward four breaths on the guide clock,
+    // so it is already in full stride (speed, sway, tentacle wave) as it swims in, and it keeps that stroke on the way out.
+    if (!G.warm && s.gIdx) {
+      var wSteps = Math.round(4 * gcyc * 30), wdt = 4 * gcyc / wSteps;
+      for (var wk2 = 0; wk2 <= wSteps; wk2++) {
+        var pk = ((s.guide - 4 * (1 - wk2 / wSteps)) % 1 + 1) % 1, pIn = pk >= 0.4 && pk < 0.62;
+        if (pIn && !G.inPow) G.curLeft = 220 * (0.6 + 2.4 * eGs);
+        G.inPow = pIn;
+        if (pIn && G.curLeft > 0) { var wl = Math.max(0.03, (0.62 - pk) * gcyc), wj = G.curLeft * Math.min(1, wdt / wl); G.v += wj; G.curLeft -= wj; }
+        G.v -= (G.v / 7 + G.v * G.v / 900) * wdt; if (G.v < 0) G.v = 0;
+        G.dist += G.v * wdt;
+        G.wave += wdt * 2 * Math.PI / (2.6 - 1.2 * eGs);
+      }
+      G.warm = true;
+    }
     var gInPow = s.guide >= 0.4 && s.guide < 0.62;
     if (gInPow && !G.inPow && s.phase === 'swim') G.curLeft = 220 * (0.6 + 2.4 * eGs);
     G.inPow = gInPow;
@@ -724,9 +739,9 @@ class Component extends DCLogic {
     el.gSwayRef.setAttribute('transform', 'translate(' + (offX + aDx + gA * Math.sin(gw)).toFixed(1) + ' ' + (aDy - G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw)).toFixed(2) + ' ' + (305 + offX + aDx).toFixed(1) + ' ' + (360 + aDy).toFixed(1) + ')');
     el.hSwayRef.style.display = pair && ga.w > 0.001 ? '' : 'none';
     if (pair && ga.w > 0.001) {
-      // the partner shares the stroke but its tentacles keep their own wave, so the two never look cloned
-      this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave + 1.9 }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
-      var gw2 = gw + 2.2;
+      // the partner moves in exact sync: same stroke, same tentacle wave, same sway (only colour and tone differ)
+      this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
+      var gw2 = gw;                                   // moves in exact lockstep with its partner
       el.hSwayRef.setAttribute('transform', 'translate(' + (offX + bDx + gA * Math.sin(gw2)).toFixed(1) + ' ' + (bDy - G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw2)).toFixed(2) + ' ' + (305 + offX + bDx).toFixed(1) + ' ' + (360 + bDy).toFixed(1) + ')');
       el.hBodyRef.setAttribute('transform', 'translate(0 ' + (4 * Math.max(0, -G.c) - 10 * Math.min(1, G.v / vTop)).toFixed(1) + ')');
     }
