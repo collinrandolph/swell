@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jellyfish body stages</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9FD3E8}a:hover{color:#CFEAF3}
+@keyframes jf-breathe{0%,100%{transform:scale(1.07,0.91)}50%{transform:scale(0.93,1.07)}}
+@keyframes jf-sway{0%,100%{transform:rotate(-2.5deg) scaleY(0.97)}50%{transform:rotate(2.5deg) scaleY(1.04)}}
+@keyframes jf-bob{0%,100%{transform:translateY(6px)}50%{transform:translateY(-6px)}}
+@keyframes jf-beat{0%{transform:scale(1)}10%{transform:scale(1.45)}22%{transform:scale(1.05)}32%{transform:scale(1.25)}55%,100%{transform:scale(1)}}
+.jf-bob{animation:jf-bob ease-in-out infinite;transform-box:view-box;transform-origin:120px 150px}
+.jf-bell{animation:jf-breathe ease-in-out infinite;transform-box:view-box;transform-origin:120px 150px}
+.jf-tent{animation:jf-sway ease-in-out infinite;transform-box:view-box;transform-origin:120px 152px}
+.jf-glow{animation:jf-beat ease-out infinite;transform-box:fill-box;transform-origin:center}
+</style>
+</helmet>
+<div style="width: 1640px; height: 800px; box-sizing: border-box; padding: 48px 32px 40px; background: #08131F; color: #E8F1F2; font-family: 'IBM Plex Mono', ui-monospace, monospace; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; justify-content: space-between; align-items: flex-end; padding: 0 8px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #9FB3BF">Species 01 · Field study</div>
+<h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 60px; line-height: 1; color: #E8F1F2">Jellyfish</h1>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: #B7C7D1; max-width: 640px">Five body stages along the energy axis. The bell breathes; the gem beats.</p>
+</div>
+<div style="display: flex; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border: 1px solid rgba(232,241,242,0.14); border-radius: 12px">
+<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #9FB3BF">Bell · breath</div>
+<div style="font-size: 16px; color: #E8F1F2">{{breathLabel}}</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border: 1px solid rgba(232,241,242,0.14); border-radius: 12px">
+<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #9FB3BF">Gem · heartbeat</div>
+<div style="font-size: 16px; color: #E8F1F2">{{hrLabel}}</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border: 1px solid rgba(232,241,242,0.14); border-radius: 12px">
+<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #9FB3BF">Gem · cut</div>
+<div style="font-size: 16px; color: #E8F1F2">{{cutLabel}}</div>
+</div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px; flex-grow: 1">
+<sc-for list="{{stages}}" as="s" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 16px 22px; border-radius: 18px; background: rgba(159,211,232,0.035); border: 1px solid rgba(232,241,242,0.08)">
+<svg viewBox="0 0 240 380" style="width: 240px; height: 380px; overflow: visible" aria-hidden="true">
+<defs>
+<linearGradient id="bell{{s.key}}" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" style="stop-color: {{bodyColor}}; stop-opacity: 0.95"></stop>
+<stop offset="1" style="stop-color: {{bodyColor}}; stop-opacity: 0.42"></stop>
+</linearGradient>
+<filter id="halo{{s.key}}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="16"></feGaussianBlur></filter>
+<filter id="glow{{s.key}}" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"></feGaussianBlur></filter>
+</defs>
+<g class="jf-bob" style="animation-duration: {{breathDur}}">
+<ellipse cx="120" cy="120" rx="96" ry="86" filter="url(#halo{{s.key}})" style="fill: {{bodyColor}}; opacity: {{s.halo}}"></ellipse>
+<g class="jf-tent" style="animation-duration: {{breathDur}}">
+<path d="{{s.tentacles}}" style="fill: none; stroke: {{bodyColor}}; stroke-opacity: 0.6; stroke-width: {{s.tW}}; stroke-linecap: round; stroke-linejoin: round"></path>
+</g>
+<g class="jf-bell" style="animation-duration: {{breathDur}}">
+<path d="{{s.bell}}" style="fill: url(#bell{{s.key}}); stroke: {{bodyColor}}; stroke-width: 2; stroke-linejoin: round"></path>
+<path d="{{s.inner}}" style="fill: #FFFFFF; opacity: 0.12"></path>
+<ellipse cx="88" cy="{{s.glossY}}" rx="22" ry="11" transform="rotate(-28 88 {{s.glossY}})" style="fill: #FFFFFF; opacity: {{s.gloss}}"></ellipse>
+<g transform="translate(120 112)">
+<circle cx="0" cy="2" r="{{glowR}}" class="jf-glow" filter="url(#glow{{s.key}})" style="fill: {{gemColor}}; opacity: {{glowOp}}; animation-duration: {{beatDur}}"></circle>
+<path d="{{gemOutline}}" style="fill: {{gemColor}}; stroke: #FFF6E8; stroke-opacity: 0.7; stroke-width: 1.2; stroke-linejoin: round"></path>
+<path d="{{gemFacets}}" style="fill: none; stroke: #FFFFFF; stroke-opacity: 0.6; stroke-width: 0.9; stroke-linecap: round"></path>
+<ellipse cx="-4" cy="-2" rx="3" ry="5" transform="rotate(25 -4 -2)" style="fill: #FFFFFF; opacity: {{gemShine}}"></ellipse>
+</g>
+</g>
+</g>
+</svg>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+<div style="display: flex; gap: 6px" aria-label="Energy level">
+<sc-for list="{{s.dots}}" as="d" hint-placeholder-count="5">
+<div style="width: 18px; height: 6px; border-radius: 3px; background: #9FD3E8; opacity: {{d.op}}"></div>
+</sc-for>
+</div>
+<div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 30px; line-height: 1.1; color: #E8F1F2">{{s.name}}</div>
+<div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #9FB3BF">Stage {{s.n}} · {{s.energy}}</div>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 40px; padding: 0 8px; font-size: 13px; line-height: 1.5; color: #B7C7D1">
+<div style="display: flex; gap: 12px; align-items: center">
+<div style="width: 14px; height: 14px; border-radius: 7px 7px 3px 3px; background: {{bodyColor}}"></div>
+<div><span style="color: #E8F1F2">Bell = nature.</span> Shaped by the week's log. Same color in every stage; only the form changes.</div>
+</div>
+<div style="display: flex; gap: 12px; align-items: center">
+<div style="width: 10px; height: 14px; border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%; background: {{gemColor}}"></div>
+<div><span style="color: #E8F1F2">Gem = intention.</span> Identical across stages. Cut and glow come from practice; it pulses with your heartbeat.</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"breathsPerMin":{"editor":"range","default":6,"min":3,"max":14,"step":1,"unit":"/min","section":"Live signals"},"heartRate":{"editor":"range","default":68,"min":45,"max":120,"step":1,"unit":"bpm","section":"Live signals"},"gemCut":{"editor":"enum","default":"Faceted","options":["Rough","Tumbled","Cabochon","Faceted","Brilliant"],"section":"Gem"},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"],"section":"Color"},"gemColor":{"editor":"color","default":"#F4A259","options":["#F4A259","#E85D75","#6FD1C6","#F2D16B"],"section":"Color"},"$preview":{"width":1640,"height":800}}'>
+class Component extends DCLogic {
+  bellPath(p) {
+    var cx = 120, cy = 150, rx = p.rx, ry = p.ry, d = '';
+    if (p.spikes > 0) {
+      var n = p.spikes * 2;
+      for (var i = 0; i <= n; i++) {
+        var t = Math.PI - i * Math.PI / n;
+        var r = (i % 2) ? 1 + p.spikeLen : 1;
+        var x = cx + rx * r * Math.cos(t), y = cy - ry * r * Math.sin(t);
+        d += (i === 0 ? 'M ' : ' L ') + x.toFixed(1) + ' ' + y.toFixed(1);
+      }
+    } else {
+      d = 'M ' + (cx - rx) + ' ' + cy + ' A ' + rx + ' ' + ry + ' 0 0 1 ' + (cx + rx) + ' ' + cy;
+    }
+    if (p.scallops > 0) {
+      var w = 2 * rx / p.scallops;
+      for (var k = 0; k < p.scallops; k++) {
+        var xs = cx + rx - k * w, xe = xs - w, xm = xs - w / 2;
+        if (p.jag) d += ' L ' + xm.toFixed(1) + ' ' + (cy + p.depth) + ' L ' + xe.toFixed(1) + ' ' + cy;
+        else d += ' Q ' + xm.toFixed(1) + ' ' + (cy + p.depth * 2) + ' ' + xe.toFixed(1) + ' ' + cy;
+      }
+    } else {
+      d += ' Q ' + cx + ' ' + (cy + 22) + ' ' + (cx - rx) + ' ' + cy;
+    }
+    return d + ' Z';
+  }
+  innerPath(p) {
+    var cx = 120, cy = 150, rx = p.rx * 0.62, ry = p.ry * 0.5;
+    return 'M ' + (cx - rx).toFixed(1) + ' ' + cy + ' A ' + rx.toFixed(1) + ' ' + ry.toFixed(1) + ' 0 0 1 ' + (cx + rx).toFixed(1) + ' ' + cy + ' Q ' + cx + ' ' + (cy + 8) + ' ' + (cx - rx).toFixed(1) + ' ' + cy + ' Z';
+  }
+  tentaclePath(p) {
+    var cx = 120, cy = 154, d = '';
+    for (var i = 0; i < p.tCount; i++) {
+      var x0 = cx - p.rx * 0.72 + i * (1.44 * p.rx / (p.tCount - 1));
+      var len = 150 + (i % 2) * 28 + (p.jag ? 0 : 12);
+      var steps = p.jag ? 11 : 28;
+      for (var j = 0; j <= steps; j++) {
+        var f = j / steps, a = p.tAmp * (0.25 + f), y = cy + f * len, x;
+        if (p.jag) x = x0 + (j === 0 ? 0 : (j % 2 ? 1 : -1) * a * 0.8);
+        else x = x0 + a * Math.sin(f * 7 + i * 1.3);
+        d += (j === 0 ? ' M ' : ' L ') + x.toFixed(1) + ' ' + y.toFixed(1);
+      }
+    }
+    return d.trim();
+  }
+  renderVals() {
+    var bpm = this.props.breathsPerMin ?? 6;
+    var hr = this.props.heartRate ?? 68;
+    var cut = this.props.gemCut ?? 'Faceted';
+    var bodyColor = this.props.bodyColor ?? '#8FD3E8';
+    var gemColor = this.props.gemColor ?? '#F4A259';
+    var defs = [
+      { key: 's1', n: 1, name: 'Big spike', energy: 'High energy', level: 5, rx: 66, ry: 60, spikes: 9, spikeLen: 0.34, scallops: 9, depth: 16, jag: true, tAmp: 12, tCount: 7, tW: 2, gloss: 0, halo: 0 },
+      { key: 's2', n: 2, name: 'Little spike', energy: 'Raised', level: 4, rx: 68, ry: 64, spikes: 9, spikeLen: 0.13, scallops: 9, depth: 10, jag: true, tAmp: 8, tCount: 6, tW: 2.5, gloss: 0.1, halo: 0 },
+      { key: 's3', n: 3, name: 'Base', energy: 'Baseline', level: 3, rx: 70, ry: 70, spikes: 0, scallops: 8, depth: 7, jag: false, tAmp: 8, tCount: 6, tW: 3, gloss: 0.22, halo: 0.06 },
+      { key: 's4', n: 4, name: 'Smooth', energy: 'Lowered', level: 2, rx: 72, ry: 76, spikes: 0, scallops: 5, depth: 4, jag: false, tAmp: 11, tCount: 5, tW: 4.5, gloss: 0.38, halo: 0.16 },
+      { key: 's5', n: 5, name: 'Shiny', energy: 'Deep calm', level: 1, rx: 75, ry: 82, spikes: 0, scallops: 0, depth: 0, jag: false, tAmp: 14, tCount: 4, tW: 8, gloss: 0.62, halo: 0.34 }
+    ];
+    var self = this;
+    var stages = defs.map(function (p) {
+      var dots = [1, 2, 3, 4, 5].map(function (i) { return { op: i <= p.level ? 1 : 0.18 }; });
+      return {
+        key: p.key, n: p.n, name: p.name, energy: p.energy, tW: p.tW, gloss: p.gloss, halo: p.halo,
+        glossY: (150 - p.ry * 0.62).toFixed(1),
+        bell: self.bellPath(p), inner: self.innerPath(p), tentacles: self.tentaclePath(p), dots: dots
+      };
+    });
+    var tear = 'M 0 -18 C 6 -9 12 -1 12 6 A 12 12 0 0 1 -12 6 C -12 -1 -6 -9 0 -18 Z';
+    var rough = 'M -2 -15 L 8 -10 L 13 2 L 9 13 L -4 15 L -13 6 L -11 -7 Z';
+    var facets = {
+      Rough: 'M -2 -15 L 1 -3 M 9 13 L 1 -3',
+      Tumbled: '',
+      Cabochon: '',
+      Faceted: 'M -6 2 L 0 -7 L 6 2 L 0 11 Z M 0 -18 L 0 -7 M -12 6 L -6 2 M 12 6 L 6 2 M 0 18 L 0 11',
+      Brilliant: 'M -6 2 L 0 -7 L 6 2 L 0 11 Z M 0 -18 L 0 -7 M -12 6 L -6 2 M 12 6 L 6 2 M 0 18 L 0 11 M 0 -7 L -6 -11 M 0 -7 L 6 -11 M -6 2 L -11 -3 M 6 2 L 11 -3 M -6 2 L -9 14 M 6 2 L 9 14 M 0 11 L -7 17 M 0 11 L 7 17'
+    };
+    var tiers = { Rough: 0, Tumbled: 1, Cabochon: 2, Faceted: 3, Brilliant: 4 };
+    var t = tiers[cut] ?? 3;
+    return {
+      stages: stages, bodyColor: bodyColor, gemColor: gemColor,
+      breathDur: (60 / bpm).toFixed(2) + 's',
+      beatDur: (60 / hr).toFixed(3) + 's',
+      gemOutline: t === 0 ? rough : tear,
+      gemFacets: facets[cut] ?? facets.Faceted,
+      glowOp: [0.18, 0.3, 0.45, 0.65, 0.9][t],
+      glowR: [12, 14, 16, 19, 23][t],
+      gemShine: [0, 0.15, 0.6, 0.5, 0.7][t],
+      breathLabel: bpm + ' breaths / min',
+      hrLabel: hr + ' bpm',
+      cutLabel: cut
+    };
+  }
+}
+</script>
+</body>
+</html>
