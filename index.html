@@ -851,10 +851,10 @@ class Component extends DCLogic {
       var hj = at(t - TIP_LAG * (j / JN));
       rows.push({ h: hj, sh: shape(hj.c, hj.c), sp: Math.min(1, hj.v / vTop) });
     }
-    var xs = [], ys = [], hooks = [];
+    var xs = [], ys = [], hooks = [], hooksY = [], chAng = 0, chX = 0, chY = 0;
     for (var n = 0; n < count; n++) {
       var rf = -1 + 2 * n / (count - 1), len = base + (n % 2) * 14;
-      xs.push([]); ys.push([]); hooks.push([]);
+      xs.push([]); ys.push([]); hooks.push([]); hooksY.push([]);
       for (var j2 = 0; j2 <= JN; j2++) {
         var f = j2 / JN, Rw = rows[j2];
         var rootX = cx + rf * Rw.sh.half * 0.9, rootY = Rw.sh.rimY + 4 + calm * 6;
@@ -864,17 +864,22 @@ class Component extends DCLogic {
         var zz = 1 - 4 * Math.abs(q - Math.round(q));
         var und = a * (Math.sin(ph) * (1 - jag) + zz * 0.8 * jag);
         var drag = rf * vig * (3 - 18 * Rw.sp) * f;          // strands stream together at speed
-        // Loaded roots (anticipation): as the bell opens, each tentacle's top section coils into an outward C-curve
-        // just under the rim, like muscles loading for the push. Strongest on the outer tentacles; the rest of the
-        // strand angles back inward and draws up. Builds through the inhale, peaks at the held top, releases on the push.
-        var load = Math.max(0, Math.min(1, (-Rw.h.c - 0.2) / 0.95));
-        load = load * load * (3 - 2 * load);
-        var hookK = 0.3 + 0.7 * Math.abs(rf);
-        var hk = f < 0.15 ? Math.sin(Math.PI / 2 * f / 0.15) : 1;
-        var hook = rf * load * hookK * (-8 + 36 * hk - 34 * Math.max(0, f - 0.15) / 0.85);
-        var lenK = 1 + 0.06 * Rw.sp - 0.06 * Math.max(0, -Rw.h.c) - 0.1 * load;
+        // Loaded roots (anticipation) with overlapping action: the tentacle is a chain of segments. As the bell opens,
+        // the top segments bend outward and the next ones curl back inward, making the C-curve; each segment feels the
+        // load a little later than the one above it, so the curl rolls down the chain as it loads and as it releases.
+        // Strongest on the outer tentacles.
+        if (j2 === 0) { chAng = 0; chX = 0; chY = 0; }
+        else {
+          var hj2 = at(t - 0.45 * f);
+          var ld = Math.max(0, Math.min(1, (-hj2.c - 0.2) / 0.95)); ld = ld * ld * (3 - 2 * ld);
+          var bend = f <= 0.17 ? 0.25 : f <= 0.58 ? -0.125 : 0;      // out over the top ~4 links, back over the next ~10
+          chAng += (rf >= 0 ? 1 : -1) * (0.3 + 0.7 * Math.abs(rf)) * ld * bend;
+          var segL = len / JN;
+          chX += segL * Math.sin(chAng); chY += segL * (Math.cos(chAng) - 1);
+        }
+        var lenK = 1 + 0.06 * Rw.sp - 0.06 * Math.max(0, -Rw.h.c);
         xs[n].push(rootX + drag + und);
-        hooks[n].push(hook);
+        hooks[n].push(chX); hooksY[n].push(chY);
         ys[n].push(rootY + f * len * lenK);
       }
     }
@@ -884,7 +889,7 @@ class Component extends DCLogic {
       var src = xs[n2].slice();
       for (var j3 = 1; j3 < JN; j3++) xs[n2][j3] = 0.25 * src[j3 - 1] + 0.5 * src[j3] + 0.25 * src[j3 + 1];
     }
-    for (var nh = 0; nh < count; nh++) for (var jh = 0; jh <= JN; jh++) xs[nh][jh] += hooks[nh][jh];   // the C-curve stays crisp
+    for (var nh = 0; nh < count; nh++) for (var jh = 0; jh <= JN; jh++) { xs[nh][jh] += hooks[nh][jh]; ys[nh][jh] += hooksY[nh][jh]; }   // the C-curve stays crisp
     for (var j4 = 0; j4 <= JN; j4++) {
       var raw = [], L = [], Rr = [];
       for (var n3 = 0; n3 < count; n3++) raw.push(xs[n3][j4]);
