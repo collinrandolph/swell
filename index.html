@@ -685,7 +685,14 @@ class Component extends DCLogic {
     s.active = true;
     var cyc = 60 / this.guideBpm(), gp = s.guide - (now - tEv) / cyc, off = gp * cyc;
     off = ((off % cyc) + cyc) % cyc; if (off > cyc / 2) off -= cyc;
-    s.inQ = Math.max(0, 1 - Math.abs(off) / (0.2 * cyc)); s.inQAt = now;
+    if (s.inMean == null) { s.inQ = 0.8; s.inMean = off; }
+    else {
+      var dI = ((off - s.inMean) % cyc + cyc) % cyc; if (dI > cyc / 2) dI -= cyc;
+      var deadI = (s.locked ? 0.16 : 0.10) * cyc;
+      s.inQ = Math.abs(dI) <= deadI ? 1 : Math.max(0, 1 - (Math.abs(dI) - deadI) / (0.18 * cyc));
+      s.inMean += dI * 0.3;
+    }
+    s.inQAt = now;
   }
   inhaleEnd() { var s = this.sim; if (!s) return; s.inhaling = false; s.inhaleEndAt = performance.now() / 1000; }
 
@@ -727,15 +734,33 @@ class Component extends DCLogic {
     off = ((off % cyc) + cyc) % cyc;
     if (off > cyc / 2) off -= cyc; if (off < -cyc / 2) off += cyc;
     s.lastOffset = off;
-    var phaseQ = Math.max(0, 1 - Math.abs(off) / (0.2 * cyc));
+    // Sync is judged on consistency, not exact timing. Your typical offset from the cue is learned; breathing at a
+    // steady offset counts as perfectly in sync. A dead zone around it scores full marks, and once locked the dead
+    // zone widens (hysteresis), so only larger variations break the lock.
+    function wrapd(x) { x = ((x % cyc) + cyc) % cyc; return x > cyc / 2 ? x - cyc : x; }
+    var withGuide = (s.gw ?? 0) >= 0.5, locked = !!s.locked;
+    var deadP = (locked ? 0.16 : 0.10) * cyc, fallP = 0.18 * cyc;
+    var phaseQ;
+    if (s.offMean == null || !withGuide) { phaseQ = 0.7; if (withGuide) s.offMean = off; }
+    else {
+      var dev = Math.abs(wrapd(off - s.offMean));
+      phaseQ = dev <= deadP ? 1 : Math.max(0, 1 - (dev - deadP) / fallP);
+      s.offMean = s.offMean + wrapd(off - s.offMean) * (phaseQ > 0 ? 0.3 : 0.6);   // a big jump re-learns the offset faster
+    }
     var interval = prev != null && t - prev < 3 * cyc ? t - prev : null;
     s.lastInterval = interval;
-    var rateQ = interval == null ? 0.4 : Math.max(0, 1 - Math.abs(interval - cyc) / (0.25 * cyc));
+    var deadR = (locked ? 0.18 : 0.12) * cyc, fallR = 0.2 * cyc;
+    var rDev = interval == null ? null : Math.abs(interval - cyc);
+    var rateQ = rDev == null ? 0.6 : rDev <= deadR ? 1 : Math.max(0, 1 - (rDev - deadR) / fallR);
     var q = phaseQ * rateQ;
     if (s.inQAt != null && nowB - s.inQAt < cyc) { q *= 0.6 + 0.4 * s.inQ; s.inQAt = null; }   // a heard inhale also counts
     s.lastQ = q;
     // SYNC with the guide: each breath pulls it a step toward how well it landed
-    if ((s.gw ?? 0) >= 0.5) s.sync += (q - s.sync) * 0.3;   // only breaths taken with a guide count toward sync
+    if (withGuide) {                                  // only breaths taken with a guide count toward sync
+      s.sync += (q - s.sync) * (q >= 0.999 ? 0.4 : 0.3);
+      if (!s.locked && s.sync > 0.7) s.locked = true;    // lock on
+      if (s.locked && s.sync < 0.4) s.locked = false;    // only a run of off breaths breaks it
+    }
     // YOUR RHYTHM, independent of the guide: rate estimate eases toward each new breath gap,
     // and steadiness (how consistent your gaps are) builds like a flywheel over several breaths
     var gap = prev != null && t - prev < 30 ? t - prev : null;
@@ -760,6 +785,8 @@ class Component extends DCLogic {
     s.holding = false; s.releaseAt = t;
     var off = s.lastOffset || 0, cyc = 60 / this.guideBpm();
     var when = Math.abs(off) < 0.25 ? 'on the cue' : Math.abs(off).toFixed(1) + ' s ' + (off > 0 ? 'after' : 'before') + ' the cue';
+    if (s.offMean != null && Math.abs(s.offMean) >= 0.25) when += ' (steady offset ' + (s.offMean > 0 ? '+' : '') + s.offMean.toFixed(1) + ' s)';
+    if (s.locked) when += ' · locked';
     var r1 = s.rate == null ? 'Breathe out again to read your rhythm' : 'Your rhythm ' + s.rate.toFixed(1) + ' / min · steady ' + Math.round(s.steady * 100) + '%';
     var r2 = 'Sync ' + Math.round(s.sync * 100) + '% · started ' + when + ' (guide ' + this.guideBpm() + ' / min)';
     this.setState({ pressed: false, readout1: r1, readout2: r2 });
@@ -889,6 +916,7 @@ class Component extends DCLogic {
     var ga = this.guideAt(s.dist);
     if (ga.idx && ga.idx !== s.gIdx) {
       s.gj = { c: 0, hist: [], wave: 0, v: 0, dist: 0, rel: 0, curLeft: 0, inPow: false };   // a new jellyfish arrives
+      s.offMean = null; s.inMean = null;
     }
     if (ga.idx) s.gIdx = ga.idx;
     // ga.w only moves the guide in from (or out to) its side. Everything it brings (cues, breathing world,
@@ -1030,7 +1058,22 @@ class Component extends DCLogic {
     if (gInPow && G.curLeft > 0) { var gl = Math.max(0.03, (0.62 - s.guide) * gcyc); var gdJ = G.curLeft * Math.min(1, dt / gl); G.v += gdJ; G.curLeft -= gdJ; }
     G.v -= (G.v / 7 + G.v * G.v / 900) * dt; if (G.v < 0) G.v = 0;
     G.dist += G.v * dt;
-    G.c = (0.85 + 0.3 * Math.min(1, G.v / 750)) * pulse(s.guide);
+    // Guide breathing, exaggerated with anticipation so it can be followed by eye:
+    //   glide  (0.65-1):  tall, narrow, streamlined (c ~ +0.8)
+    //   inhale (0-0.33):  winds up the other way into a wide, flat flare, sinking slightly (the wind-up)
+    //   hold   (0.33-0.4): stays at full flare a beat, matching the sound's dip at the top of the breath
+    //   exhale (0.4-0.5): snaps shut into the push, then eases into the glide
+    function guidePulse(ph) {
+      var Tp = [0, 0.08, 0.33, 0.4, 0.5, 0.65, 1], Cp = [0.8, 0.45, -1.3, -1.36, 1.15, 1.0, 0.8];
+      for (var ii = 0; ii < Tp.length - 1; ii++) if (ph <= Tp[ii + 1]) {
+        var uu = (ph - Tp[ii]) / (Tp[ii + 1] - Tp[ii]);
+        return Cp[ii] + (Cp[ii + 1] - Cp[ii]) * (1 - Math.cos(Math.PI * uu)) / 2;
+      }
+      return Cp[Cp.length - 1];
+    }
+    G.c = (0.85 + 0.15 * Math.min(1, G.v / 750)) * guidePulse(s.guide);
+    // anticipation in the body too: it sinks as it fills, then lunges up on the push
+    var gDip = 14 * Math.max(0, -G.c) / 1.36 - 12 * Math.min(1, G.v / vTop) - (s.guide >= 0.4 && s.guide < 0.55 ? 8 * Math.sin(Math.PI * (s.guide - 0.4) / 0.15) : 0);
     G.wave += dt * 2 * Math.PI / (2.6 - 1.2 * eGs);
     G.hist.push({ t: t, c: G.c, v: G.v });
     while (G.hist.length > 2 && G.hist[1].t < t - 1.2) G.hist.shift();
@@ -1055,9 +1098,9 @@ class Component extends DCLogic {
       this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
       var gw2 = gw;                                   // moves in exact lockstep with its partner
       el.hSwayRef.setAttribute('transform', 'translate(' + (offX + bDx + gA * Math.sin(gw2)).toFixed(1) + ' ' + (bDy - G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw2)).toFixed(2) + ' ' + (305 + offX + bDx).toFixed(1) + ' ' + (360 + bDy).toFixed(1) + ')');
-      el.hBodyRef.setAttribute('transform', 'translate(0 ' + (4 * Math.max(0, -G.c) - 10 * Math.min(1, G.v / vTop)).toFixed(1) + ')');
+      el.hBodyRef.setAttribute('transform', 'translate(0 ' + gDip.toFixed(1) + ')');
     }
-    el.gBodyRef.setAttribute('transform', 'translate(0 ' + (4 * Math.max(0, -G.c) - 10 * Math.min(1, G.v / vTop)).toFixed(1) + ')');
+    el.gBodyRef.setAttribute('transform', 'translate(0 ' + gDip.toFixed(1) + ')');
     // guide colour = its beat (low, slow beats cool cyan; fast beats violet into pink), same root beat as the sound
     var eGa = Math.min(1, Math.max(0, (bpm - 3) / 11));
     var C0g = Math.round((110 + 90 * eGa) / 5) * 5, B0g = Math.max(0.5, Math.round(C0g * (1 / 50 + (1 / 16 - 1 / 50) * eGa) * 2) / 2);
