@@ -173,7 +173,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{soundOn}}" onChange="{{onSound}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Sound (headphones)</label>
 </div>
 <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
-<div ref="{{depthRef}}" style="font-size: 11px; color: #E8F1F2; width: 58px; white-space: nowrap">0 m</div>
+<div ref="{{depthRef}}" style="font-size: 11px; color: #E8F1F2; width: 64px; white-space: nowrap">0 px</div>
 <div style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1; width: 38px">Sync</div>
 <div style="flex-grow: 1; height: 6px; border-radius: 3px; background: rgba(232,241,242,0.12); overflow: hidden">
 <div ref="{{syncRef}}" style="width: 100%; height: 6px; border-radius: 3px; background: {{bodyColor}}; transform-origin: left center; transform: scaleX(0.02)"></div>
@@ -202,7 +202,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"breathsPerMin":{"editor":"range","default":6,"min":3,"max":14,"step":1,"unit":"/min"},"routeY1":{"editor":"range","default":8,"min":0,"max":100,"step":1,"unit":"m","section":"Route"},"routeBuffer":{"editor":"range","default":4,"min":1,"max":30,"step":1,"unit":"m","section":"Route"},"routeY2":{"editor":"range","default":15,"min":1,"max":200,"step":1,"unit":"m","section":"Route"},"routeY3":{"editor":"range","default":15,"min":1,"max":200,"step":1,"unit":"m","section":"Route"},"routeSurface":{"editor":"range","default":6,"min":0,"max":100,"step":1,"unit":"m","section":"Route"},"guide2PerMin":{"editor":"range","default":9,"min":3,"max":14,"step":1,"unit":"/min"},"breathNoise":{"editor":"enum","default":"Brown","options":["Brown","Pink","Off"]},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"]},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"breathsPerMin":{"editor":"range","default":6,"min":3,"max":14,"step":1,"unit":"/min"},"routeY1":{"editor":"range","default":800,"min":0,"max":10000,"step":50,"unit":"px","section":"Route"},"routeBuffer":{"editor":"range","default":400,"min":50,"max":3000,"step":50,"unit":"px","section":"Route"},"routeY2":{"editor":"range","default":1500,"min":50,"max":20000,"step":50,"unit":"px","section":"Route"},"routeY3":{"editor":"range","default":1500,"min":50,"max":20000,"step":50,"unit":"px","section":"Route"},"routeSurface":{"editor":"range","default":600,"min":0,"max":10000,"step":50,"unit":"px","section":"Route"},"guide2PerMin":{"editor":"range","default":9,"min":3,"max":14,"step":1,"unit":"/min"},"breathNoise":{"editor":"enum","default":"Brown","options":["Brown","Pink","Off"]},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"]},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   // ---------- setup ----------
   ref(name) {
@@ -389,12 +389,12 @@ class Component extends DCLogic {
   guide2Bpm() { var st = this.state || {}; return st.bpm2 ?? (this.props.guide2PerMin ?? 9); }
   // the jellyfish currently with you sets the rhythm (between guides, the last one's rhythm keeps time unseen)
   guideBpm() { var s = this.sim; return s && s.gIdx === 2 ? this.guide2Bpm() : this.guide1Bpm(); }
-  // Route, in meters above the seafloor (100 px = 1 m):
+  // Route, in px above the seafloor:
   //   alone y1 | guide 1 in b | with guide 1 y2 | guide 1 out b | guide 2 in b | with guide 2 y3 | guide 2 out b | alone s | surface
   route() {
-    var P = this.props, b = P.routeBuffer ?? 4;
-    var a0 = P.routeY1 ?? 8, a1 = a0 + b, a2 = a1 + (P.routeY2 ?? 15), a3 = a2 + b, a4 = a3 + b, a5 = a4 + (P.routeY3 ?? 15), a6 = a5 + b;
-    return { b: b, a: [a0, a1, a2, a3, a4, a5, a6], surface: a6 + (P.routeSurface ?? 6) };
+    var P = this.props, b = P.routeBuffer ?? 400;
+    var a0 = P.routeY1 ?? 800, a1 = a0 + b, a2 = a1 + (P.routeY2 ?? 1500), a3 = a2 + b, a4 = a3 + b, a5 = a4 + (P.routeY3 ?? 1500), a6 = a5 + b;
+    return { b: b, a: [a0, a1, a2, a3, a4, a5, a6], surface: a6 + (P.routeSurface ?? 600) };
   }
   guideAt(m) {
     var R = this.route(), a = R.a, b = R.b;
@@ -564,7 +564,7 @@ class Component extends DCLogic {
     var s = this.sim, el = this._els; if (!s || !el || !el.bellRef) return;
     var dt = s.now ? Math.min(0.05, t - s.now) : 0.016; s.now = t;
     // where you are on the route decides which guide is with you and how present it is (0 = absent, 1 = beside you)
-    var ga = this.guideAt(s.dist / 100);
+    var ga = this.guideAt(s.dist);
     if (ga.idx && ga.idx !== s.gIdx) {
       s.gj = { c: 0, hist: [], wave: 0, v: 0, dist: 0, rel: 0, curLeft: 0, inPow: false };   // a new jellyfish arrives
     }
@@ -649,7 +649,7 @@ class Component extends DCLogic {
     s.v -= (s.v / 7 + s.v * s.v / 900) * dt;          // the quadratic term sets the top speed, reached around 10 / min
     if (s.v < 0) s.v = 0;
     s.dist += s.v * dt;
-    var S = this.route().surface * 100;             // the surface: the end of the route
+    var S = this.route().surface;                   // the surface: the end of the route
     if (s.phase === 'swim' && s.dist >= S) { s.phase = 'breach'; s.yOff = 0; s.vy = s.v; }
     if (s.phase === 'breach' || s.phase === 'float') s.dist = S;   // the camera stops at the surface
     var camV = s.phase === 'swim' ? s.v : 0;
@@ -852,8 +852,8 @@ class Component extends DCLogic {
     if ((this.state || {}).sound) this.updateAudio(s, sync, swell, bpm, s.guide, gw0);
 
     if (el.depthRef) {
-      var dTxt = Math.max(0, Math.round((S - s.dist) / 100)) + ' m';
-      if (el.depthRef.textContent !== dTxt) el.depthRef.textContent = dTxt;   // meters to the surface
+      var dTxt = Math.max(0, Math.round(S - s.dist)) + ' px';
+      if (el.depthRef.textContent !== dTxt) el.depthRef.textContent = dTxt;   // distance to the surface
     }
     // seafloor and seaweed: they start in view, hiding both jellyfish, and fall away as you rise
     var floorY = 640 + s.dist;
