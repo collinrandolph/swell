@@ -23,6 +23,7 @@ Every session is one ascent on a fixed path, built from a published breathwork r
 
 - **Start state:** the session opens on the ocean floor with your jellyfish completely hidden in a seaweed field. The first exhale lifts it out of the seaweed and it begins rising above the seafloor.
 - **End state:** the surface is reached at a set height, not a set time. The jellyfish leaps out of the water at whatever velocity it carries, gravity brings it back, and it settles into idly floating on the surface. The sky above is one of a random set (golden hour, blue sky, aurora, starry night, full moon, orange sunrise, purple sunset); the prototype has blue sky only.
+- **Route (by height):** alone for y1 · guide 1 transitions in over a buffer b · with guide 1 for y2 · guide 1 transitions out over b · guide 2 (different rhythm) transitions in over b · with guide 2 for y3 · guide 2 transitions out over b, ending s before the surface · alone to the surface. Prototype defaults: y1 8 m, b 4 m, y2 15 m, y3 15 m, s 6 m (1 m = 100 px), so the surface is at 60 m. Guide 1 swims in and off on your right, guide 2 on your left. Without a guide, sync fades and the breathing world and its sound go quiet.
 - **Fixed timing:** sync never changes how long the ascent takes.
 - **Energy and length:** higher-energy sessions have shorter durations. They feel faster without any programmed link between sync and speed.
 

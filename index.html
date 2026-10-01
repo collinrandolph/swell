@@ -157,7 +157,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 </svg>
 <div style="position: absolute; left: 24px; right: 24px; top: 30px; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 14px; background: rgba(6,16,27,0.55); border: 1px solid rgba(232,241,242,0.12)">
 <div style="display: flex; justify-content: space-between; align-items: baseline">
-<label for="sw-guide" style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1">Guide rhythm</label>
+<label for="sw-guide" style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1">Guide 1 rhythm</label>
 <div style="font-size: 12px; color: #E8F1F2">{{guideLabel}}</div>
 </div>
 <input id="sw-guide" type="range" min="3" max="14" step="0.5" value="{{bpm}}" onChange="{{onGuide}}" style="width: 100%; height: 28px; margin: 0; accent-color: {{bodyColor}}">
@@ -165,13 +165,19 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <span>Slower</span>
 <span>Faster</span>
 </div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px">
+<label for="sw-guide2" style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1">Guide 2 rhythm</label>
+<div style="font-size: 12px; color: #E8F1F2">{{guide2Label}}</div>
+</div>
+<input id="sw-guide2" type="range" min="3" max="14" step="0.5" value="{{bpm2}}" onChange="{{onGuide2}}" style="width: 100%; height: 28px; margin: 0; accent-color: {{bodyColor}}">
 <div style="display: flex; flex-wrap: wrap; column-gap: 18px; margin-top: 2px; font-size: 12px; color: #E8F1F2">
 <label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{fishBgOn}}" onChange="{{onFishBg}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Background fish</label>
 <label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{fishFgOn}}" onChange="{{onFishFg}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Foreground fish</label>
 <label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{soundOn}}" onChange="{{onSound}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Sound (headphones)</label>
 </div>
 <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
-<div style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1; width: 44px">Sync</div>
+<div ref="{{depthRef}}" style="font-size: 11px; color: #E8F1F2; width: 58px; white-space: nowrap">0 m</div>
+<div style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1; width: 38px">Sync</div>
 <div style="flex-grow: 1; height: 6px; border-radius: 3px; background: rgba(232,241,242,0.12); overflow: hidden">
 <div ref="{{syncRef}}" style="width: 100%; height: 6px; border-radius: 3px; background: {{bodyColor}}; transform-origin: left center; transform: scaleX(0.02)"></div>
 </div>
@@ -200,7 +206,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 </div>
 </template>
 <script>
-const PROPS = {"breathsPerMin": 6, "ascentHeight": 5000, "breathNoise": "Brown", "bodyColor": "#8FD3E8"};
+const PROPS = {"breathsPerMin": 6, "routeY1": 8, "routeBuffer": 4, "routeY2": 15, "routeY3": 15, "routeSurface": 6, "guide2PerMin": 9, "breathNoise": "Brown", "bodyColor": "#8FD3E8"};
 
 // ---- minimal runtime: mounts the template, wires bindings, events and refs (stands in for the design-tool runtime) ----
 class DCLogic {
@@ -367,7 +373,8 @@ class Component extends DCLogic {
     else if (this.audio) this.audio.ctx.suspend();
     this.setState({ sound: on });
   }
-  updateAudio(s, sync, swell, bpm, gph) {
+  updateAudio(s, sync, swell, bpm, gph, gw) {
+    gw = gw == null ? 1 : gw;
     var a = this.audio; if (!a || a.ctx.state !== 'running') return;
     var now = a.ctx.currentTime;
     function tune(v, carrier, beat, tc) {
@@ -406,7 +413,7 @@ class Component extends DCLogic {
       var ue = (gph - 0.4) / 0.25;
       env = ue < 0.12 ? floor + (0.9 - floor) * ease(ue / 0.12) : 0.9 * (1 - ease((ue - 0.12) / 0.88)); // exhale: rises out of the dip, long ebb
     } else env = 0;
-    var bedVol = 0.001 + (0.05 + 0.03 * sync) * env;
+    var bedVol = (0.001 + (0.05 + 0.03 * sync) * env) * gw;
     tune(a.bed, C0 * lift, B0 * lift, 0.12);
     level(a.bed, bedVol, 0, 0.025);
     tune(a.bedHi, 2 * C0 * lift, 2 * B0 * lift, 0.12);
@@ -417,7 +424,7 @@ class Component extends DCLogic {
     if (gph < 0.4) cut = lo + (hi * 0.65 - lo) * ease(gph / 0.4);
     else if (gph < 0.65) cut = hi + (lo - hi) * ease((gph - 0.4) / 0.25);
     else cut = lo;
-    var nVol = (0.022 + 0.014 * sync) * env * (kind === 'Pink' ? 0.75 : 1);  // a gentle undercurrent beneath the tones (slightly raised: the steeper filter removes energy)
+    var nVol = (0.022 + 0.014 * sync) * env * (kind === 'Pink' ? 0.75 : 1) * gw;  // a gentle undercurrent beneath the tones (slightly raised: the steeper filter removes energy)
     ['Brown', 'Pink'].forEach(function (nk) {
       var nc = a.noise[nk];
       nc.lp.frequency.setTargetAtTime(cut, now, 0.08);
@@ -447,7 +454,28 @@ class Component extends DCLogic {
   }
 
   // ---------- breath input (stands in for the microphone: down = exhale detected, up = exhale ended) ----------
-  guideBpm() { var st = this.state || {}; return st.bpm ?? (this.props.breathsPerMin ?? 6); }
+  guide1Bpm() { var st = this.state || {}; return st.bpm ?? (this.props.breathsPerMin ?? 6); }
+  guide2Bpm() { var st = this.state || {}; return st.bpm2 ?? (this.props.guide2PerMin ?? 9); }
+  // the jellyfish currently with you sets the rhythm (between guides, the last one's rhythm keeps time unseen)
+  guideBpm() { var s = this.sim; return s && s.gIdx === 2 ? this.guide2Bpm() : this.guide1Bpm(); }
+  // Route, in meters above the seafloor (100 px = 1 m):
+  //   alone y1 | guide 1 in b | with guide 1 y2 | guide 1 out b | guide 2 in b | with guide 2 y3 | guide 2 out b | alone s | surface
+  route() {
+    var P = this.props, b = P.routeBuffer ?? 4;
+    var a0 = P.routeY1 ?? 8, a1 = a0 + b, a2 = a1 + (P.routeY2 ?? 15), a3 = a2 + b, a4 = a3 + b, a5 = a4 + (P.routeY3 ?? 15), a6 = a5 + b;
+    return { b: b, a: [a0, a1, a2, a3, a4, a5, a6], surface: a6 + (P.routeSurface ?? 6) };
+  }
+  guideAt(m) {
+    var R = this.route(), a = R.a, b = R.b;
+    function ease(x) { x = Math.max(0, Math.min(1, x)); return (1 - Math.cos(Math.PI * x)) / 2; }
+    if (m < a[0] || m >= a[6]) return { idx: 0, w: 0 };
+    if (m < a[1]) return { idx: 1, w: ease((m - a[0]) / b) };
+    if (m < a[2]) return { idx: 1, w: 1 };
+    if (m < a[3]) return { idx: 1, w: 1 - ease((m - a[2]) / b) };
+    if (m < a[4]) return { idx: 2, w: ease((m - a[3]) / b) };
+    if (m < a[5]) return { idx: 2, w: 1 };
+    return { idx: 2, w: 1 - ease((m - a[5]) / b) };
+  }
   breathStart() {
     var s = this.sim; if (!s || s.holding) return;
     var t = performance.now() / 1000;
@@ -469,7 +497,7 @@ class Component extends DCLogic {
     var q = phaseQ * rateQ;
     s.lastQ = q;
     // SYNC with the guide: each breath pulls it a step toward how well it landed
-    s.sync += (q - s.sync) * 0.3;
+    if ((s.gw ?? 0) >= 0.5) s.sync += (q - s.sync) * 0.3;   // only breaths taken with a guide count toward sync
     // YOUR RHYTHM, independent of the guide: rate estimate eases toward each new breath gap,
     // and steadiness (how consistent your gaps are) builds like a flywheel over several breaths
     var gap = prev != null && t - prev < 30 ? t - prev : null;
@@ -604,16 +632,26 @@ class Component extends DCLogic {
   tick(t) {
     var s = this.sim, el = this._els; if (!s || !el || !el.bellRef) return;
     var dt = s.now ? Math.min(0.05, t - s.now) : 0.016; s.now = t;
+    // where you are on the route decides which guide is with you and how present it is (0 = absent, 1 = beside you)
+    var ga = this.guideAt(s.dist / 100);
+    if (ga.idx && ga.idx !== s.gIdx) {
+      s.gj = { c: 0, hist: [], wave: 0, v: 0, dist: 0, rel: 0, curLeft: 0, inPow: false };   // a new jellyfish arrives
+    }
+    if (ga.idx) s.gIdx = ga.idx;
+    s.gw = ga.w;
+    var gw0 = ga.w;
     var bpm = this.guideBpm(), gcyc = 60 / bpm;
     if (s.phase !== 'start') s.guide = (s.guide + dt / gcyc) % 1;
     var gph = s.guide, swell;
     if (gph < 0.4) swell = (1 - Math.cos(Math.PI * gph / 0.4)) / 2;
     else if (gph < 0.65) swell = 1 - (1 - Math.cos(Math.PI * (gph - 0.4) / 0.25)) / 2;
     else swell = 0;
+    var swellRaw = swell;
+    swell *= gw0;                                    // the world breathes with a guide only while one is with you
 
     var lastPress = s.presses.length ? s.presses[s.presses.length - 1] : -100;
     // sync with the guide fades if you stop breathing with it
-    if (!s.holding && t - lastPress > 1.5 * gcyc) s.sync *= Math.exp(-dt / 4);
+    if ((!s.holding && t - lastPress > 1.5 * gcyc) || gw0 < 0.5) s.sync *= Math.exp(-dt / 4);
     s.syncShown += (s.sync - s.syncShown) * (1 - Math.exp(-dt / 1.2));
     var sync = s.syncShown;
     // your own steadiness fades if you stop breathing (no breath for twice your usual gap)
@@ -680,7 +718,7 @@ class Component extends DCLogic {
     s.v -= (s.v / 7 + s.v * s.v / 900) * dt;          // the quadratic term sets the top speed, reached around 10 / min
     if (s.v < 0) s.v = 0;
     s.dist += s.v * dt;
-    var S = this.props.ascentHeight ?? 5000;         // the surface sits this far above the seafloor
+    var S = this.route().surface * 100;             // the surface: the end of the route
     if (s.phase === 'swim' && s.dist >= S) { s.phase = 'breach'; s.yOff = 0; s.vy = s.v; }
     if (s.phase === 'breach' || s.phase === 'float') s.dist = S;   // the camera stops at the surface
     var camV = s.phase === 'swim' ? s.v : 0;
@@ -723,7 +761,11 @@ class Component extends DCLogic {
     if (s.phase === 'start') G.rel = 0;
     this.drawJelly(G, { bell: el.gBellRef, inner: el.gInnerRef, gloss: el.gGlossRef, tent: el.gTentRef }, t, eGs, vTop);
     var gA = 6 + 20 * eGs, gT = 2 + 6 * eGs, gw = 2 * Math.PI * G.dist / 900;
-    el.gSwayRef.setAttribute('transform', 'translate(' + (gA * Math.sin(gw)).toFixed(1) + ' ' + (-G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw)).toFixed(2) + ' 305 360)');
+    // guide 1 keeps to your right and comes and goes on that side; guide 2 keeps to your left
+    var side = s.gIdx === 2 ? -1 : 1, slotX = s.gIdx === 2 ? -220 : 0;
+    var offX = slotX + side * (1 - gw0) * 260;
+    el.gSwayRef.style.display = gw0 > 0.001 ? '' : 'none';
+    el.gSwayRef.setAttribute('transform', 'translate(' + (offX + gA * Math.sin(gw)).toFixed(1) + ' ' + (-G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw)).toFixed(2) + ' ' + (305 + offX).toFixed(1) + ' 360)');
     el.gBodyRef.setAttribute('transform', 'translate(0 ' + (4 * Math.max(0, -G.c) - 10 * Math.min(1, G.v / vTop)).toFixed(1) + ')');
     // guide colour = its beat (low, slow beats cool cyan; fast beats violet into pink), same root beat as the sound
     var eGa = Math.min(1, Math.max(0, (bpm - 3) / 11));
@@ -766,7 +808,7 @@ class Component extends DCLogic {
     if (el.haloRef) el.haloRef.style.opacity = Math.min(0.9, haloBase * restOp * glowK * (1 + 1.4 * link)).toFixed(3);
     if (el.innerRef) el.innerRef.style.opacity = Math.min(0.5, 0.12 * restOp * glowK * (1 + 1.4 * link)).toFixed(3);
     var gHaloBase = 0.12 + 0.26 * (1 - eGs) * (1 - eGs);
-    if (el.gHaloRef) el.gHaloRef.style.opacity = Math.min(0.9, gHaloBase * glowK * (1 + 1.4 * swell)).toFixed(3);
+    if (el.gHaloRef) el.gHaloRef.style.opacity = Math.min(0.9, gHaloBase * glowK * (1 + 1.4 * swellRaw)).toFixed(3);
     if (el.gInnerRef) el.gInnerRef.style.opacity = Math.min(0.5, 0.12 * glowK * (1 + 1.4 * swell)).toFixed(3);
     // color: monochrome when unsynced; each particle drifts toward its own hue as sync builds
     var HUES = [[87, 244, 213], [143, 184, 255], [197, 155, 255], [255, 159, 208], [255, 210, 122]];
@@ -782,7 +824,7 @@ class Component extends DCLogic {
         pth.style.stroke = tint(grp[3], h4, hueMix, 0.55 * link);   // glow brightens toward white with the swell
       }
     });
-    if (el.guideCueRef) el.guideCueRef.style.opacity = (1 - 0.75 * Math.max(0, (sync - 0.3) / 0.7)).toFixed(2);
+    if (el.guideCueRef) el.guideCueRef.style.opacity = ((1 - 0.75 * Math.max(0, (sync - 0.3) / 0.7)) * gw0).toFixed(2);
     el.bodyRef.setAttribute('transform', 'translate(0 ' + (4 * Math.max(0, -s.c) - 10 * spd).toFixed(1) + ')');
 
     // speed lines: stretch tracks speed, collapsing to dots well before the water stops
@@ -876,8 +918,12 @@ class Component extends DCLogic {
       });
     });
 
-    if ((this.state || {}).sound) this.updateAudio(s, sync, swell, bpm, s.guide);
+    if ((this.state || {}).sound) this.updateAudio(s, sync, swell, bpm, s.guide, gw0);
 
+    if (el.depthRef) {
+      var dTxt = Math.max(0, Math.round((S - s.dist) / 100)) + ' m';
+      if (el.depthRef.textContent !== dTxt) el.depthRef.textContent = dTxt;   // meters to the surface
+    }
     // seafloor and seaweed: they start in view, hiding both jellyfish, and fall away as you rise
     var floorY = 640 + s.dist;
     if (el.floorRef) el.floorRef.style.display = floorY > 1400 ? 'none' : '';
@@ -938,9 +984,9 @@ class Component extends DCLogic {
   renderVals() {
     this.init();
     var self = this, st = this.state || {};
-    var bpm = this.guideBpm();
+    var bpm = this.guide1Bpm();
     var bodyColor = this.props.bodyColor ?? '#8FD3E8';
-    var names = ['farFieldRef', 'nearFieldRef', 'far0_0Ref', 'far0_1Ref', 'far0_2Ref', 'far0_3Ref', 'far0_4Ref', 'far1_0Ref', 'far1_1Ref', 'far1_2Ref', 'far1_3Ref', 'far1_4Ref', 'near0_0Ref', 'near0_1Ref', 'near0_2Ref', 'near0_3Ref', 'near0_4Ref', 'near1_0Ref', 'near1_1Ref', 'near1_2Ref', 'near1_3Ref', 'near1_4Ref', 'near2_0Ref', 'near2_1Ref', 'near2_2Ref', 'near2_3Ref', 'near2_4Ref', 'swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'swellRef', 'syncRef', 'glowRef', 'dimRef', 'guideCueRef', 'wclipRef', 'skyRef', 'floorRef', 'weedB0Ref', 'weedB1Ref', 'weedF0Ref', 'weedF1Ref', 'weedF2Ref', 'veilRef', 'surfaceRef', 'cueStartRef', 'cueEndRef', 'pStop0Ref', 'pStop1Ref', 'gStop0Ref', 'gStop1Ref', 'gSwayRef', 'gBodyRef', 'gHaloRef', 'gTentRef', 'gBellRef', 'gInnerRef', 'gGlossRef', 'fishL0LayerRef', 'fishL0_0Ref', 'tailL0_0Ref', 'fishL0_1Ref', 'tailL0_1Ref', 'fishL0_2Ref', 'tailL0_2Ref', 'fishL1LayerRef', 'fishL1_0Ref', 'tailL1_0Ref', 'fishL1_1Ref', 'tailL1_1Ref', 'fishL1_2Ref', 'tailL1_2Ref', 'fishL2LayerRef', 'fishL2_0Ref', 'tailL2_0Ref', 'fishL2_1Ref', 'tailL2_1Ref', 'fishL3LayerRef', 'fishL3_0Ref', 'tailL3_0Ref', 'fishL4LayerRef', 'fishL4_0Ref', 'tailL4_0Ref'];
+    var names = ['farFieldRef', 'nearFieldRef', 'far0_0Ref', 'far0_1Ref', 'far0_2Ref', 'far0_3Ref', 'far0_4Ref', 'far1_0Ref', 'far1_1Ref', 'far1_2Ref', 'far1_3Ref', 'far1_4Ref', 'near0_0Ref', 'near0_1Ref', 'near0_2Ref', 'near0_3Ref', 'near0_4Ref', 'near1_0Ref', 'near1_1Ref', 'near1_2Ref', 'near1_3Ref', 'near1_4Ref', 'near2_0Ref', 'near2_1Ref', 'near2_2Ref', 'near2_3Ref', 'near2_4Ref', 'swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'swellRef', 'syncRef', 'glowRef', 'dimRef', 'guideCueRef', 'depthRef', 'wclipRef', 'skyRef', 'floorRef', 'weedB0Ref', 'weedB1Ref', 'weedF0Ref', 'weedF1Ref', 'weedF2Ref', 'veilRef', 'surfaceRef', 'cueStartRef', 'cueEndRef', 'pStop0Ref', 'pStop1Ref', 'gStop0Ref', 'gStop1Ref', 'gSwayRef', 'gBodyRef', 'gHaloRef', 'gTentRef', 'gBellRef', 'gInnerRef', 'gGlossRef', 'fishL0LayerRef', 'fishL0_0Ref', 'tailL0_0Ref', 'fishL0_1Ref', 'tailL0_1Ref', 'fishL0_2Ref', 'tailL0_2Ref', 'fishL1LayerRef', 'fishL1_0Ref', 'tailL1_0Ref', 'fishL1_1Ref', 'tailL1_1Ref', 'fishL1_2Ref', 'tailL1_2Ref', 'fishL2LayerRef', 'fishL2_0Ref', 'tailL2_0Ref', 'fishL2_1Ref', 'tailL2_1Ref', 'fishL3LayerRef', 'fishL3_0Ref', 'tailL3_0Ref', 'fishL4LayerRef', 'fishL4_0Ref', 'tailL4_0Ref'];
     var vals = {};
     names.forEach(function (nm) { vals[nm] = self.ref(nm); });
     return Object.assign(vals, {
@@ -948,6 +994,9 @@ class Component extends DCLogic {
       bpm: bpm,
       guideLabel: bpm + ' breaths / min',
       onGuide: function (ev) { self.setState({ bpm: Number(ev.target.value) }); },
+      bpm2: this.guide2Bpm(),
+      guide2Label: this.guide2Bpm() + ' breaths / min',
+      onGuide2: function (ev) { self.setState({ bpm2: Number(ev.target.value) }); },
       fishBgOn: st.fishBg !== false,
       fishFgOn: st.fishFg !== false,
       onFishBg: function (ev) { self.setState({ fishBg: ev.target.checked }); },
