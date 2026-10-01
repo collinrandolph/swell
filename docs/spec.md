@@ -21,6 +21,8 @@ Every session is one ascent on a fixed path, built from a published breathwork r
 3. Each encounter ends when the jellyfish swims off to the side and a new one arrives.
 4. This repeats until the session timer runs out and you reach the surface.
 
+- **Start state:** the session opens on the ocean floor with your jellyfish completely hidden in a seaweed field. The first exhale lifts it out of the seaweed and it begins rising above the seafloor.
+- **End state:** the surface is reached at a set height, not a set time. The jellyfish leaps out of the water at whatever velocity it carries, gravity brings it back, and it settles into idly floating on the surface. The sky above is one of a random set (golden hour, blue sky, aurora, starry night, full moon, orange sunrise, purple sunset); the prototype has blue sky only.
 - **Fixed timing:** sync never changes how long the ascent takes.
 - **Energy and length:** higher-energy sessions have shorter durations. They feel faster without any programmed link between sync and speed.
 

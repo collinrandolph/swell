@@ -42,7 +42,27 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <filter id="sw-dof1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.35"></feGaussianBlur></filter>
 <filter id="sw-dof2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.6"></feGaussianBlur></filter>
 <filter id="sw-halo" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"></feGaussianBlur></filter>
+<linearGradient id="sw-sky" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" style="stop-color: #2F7FD8"></stop>
+<stop offset="0.7" style="stop-color: #7FC2F0"></stop>
+<stop offset="1" style="stop-color: #BFE6FA"></stop>
+</linearGradient>
+<filter id="sw-cloud" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"></feGaussianBlur></filter>
+<filter id="sw-sun" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="22"></feGaussianBlur></filter>
+<clipPath id="sw-wclip"><rect ref="{{wclipRef}}" x="-60" y="-4000" width="510" height="9000"></rect></clipPath>
 </defs>
+<g ref="{{skyRef}}" style="display: none">
+<rect x="-10" y="-900" width="410" height="900" style="fill: url(#sw-sky)"></rect>
+<circle cx="292" cy="-300" r="70" filter="url(#sw-sun)" style="fill: #FFF3C4; opacity: 0.55"></circle>
+<circle cx="292" cy="-300" r="26" style="fill: #FFF8E1"></circle>
+<g filter="url(#sw-cloud)" style="fill: #FFFFFF; opacity: 0.85">
+<ellipse cx="80" cy="-420" rx="58" ry="16"></ellipse><ellipse cx="112" cy="-432" rx="36" ry="18"></ellipse>
+<ellipse cx="250" cy="-170" rx="70" ry="14"></ellipse><ellipse cx="220" cy="-180" rx="34" ry="15"></ellipse>
+<ellipse cx="350" cy="-520" rx="48" ry="12"></ellipse>
+</g>
+<rect x="-10" y="-36" width="410" height="36" style="fill: #FFFFFF; opacity: 0.18"></rect>
+</g>
+<g clip-path="url(#sw-wclip)">
 <rect x="0" y="0" width="390" height="844" style="fill: url(#sw-water)"></rect>
 <rect ref="{{glowRef}}" x="0" y="0" width="390" height="844" style="fill: url(#sw-glow); opacity: 0"></rect>
 <rect ref="{{dimRef}}" x="0" y="0" width="390" height="844" style="fill: #01050A; opacity: 0"></rect>
@@ -89,6 +109,16 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <path ref="{{near2_3Ref}}" d="M 0 0" style="fill: none; stroke: #CFEAF3; stroke-opacity: 0.44; stroke-width: 5.2; stroke-linecap: round"></path>
 <path ref="{{near2_4Ref}}" d="M 0 0" style="fill: none; stroke: #CFEAF3; stroke-opacity: 0.44; stroke-width: 5.2; stroke-linecap: round"></path>
 </g>
+<g ref="{{floorRef}}">
+<path d="M -20 652 C 60 630 120 648 200 638 C 280 628 330 650 410 636 L 410 1500 L -20 1500 Z" style="fill: #0A1A20"></path>
+<path d="M -20 652 C 60 630 120 648 200 638 C 280 628 330 650 410 636" style="fill: none; stroke: #23434A; stroke-width: 2; opacity: 0.7"></path>
+<ellipse cx="62" cy="650" rx="26" ry="11" style="fill: #102A30"></ellipse>
+<ellipse cx="318" cy="646" rx="34" ry="13" style="fill: #0E252B"></ellipse>
+<ellipse cx="190" cy="660" rx="18" ry="7" style="fill: #12303A"></ellipse>
+</g>
+<path ref="{{weedB0Ref}}" d="M 0 0" style="fill: #0B2A22"></path>
+<path ref="{{weedB1Ref}}" d="M 0 0" style="fill: #0E3328"></path>
+</g>
 <g ref="{{gSwayRef}}">
 <g ref="{{gBodyRef}}">
 <svg x="245" y="285" width="120" height="190" viewBox="0 0 240 380" style="overflow: visible">
@@ -111,12 +141,19 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 </svg>
 </g>
 </g>
+<g clip-path="url(#sw-wclip)">
+<path ref="{{weedF0Ref}}" d="M 0 0" style="fill: #0F3529"></path>
+<path ref="{{weedF1Ref}}" d="M 0 0" style="fill: #123F31"></path>
+<path ref="{{weedF2Ref}}" d="M 0 0" style="fill: #17503D"></path>
 <g ref="{{fishL3LayerRef}}">
 <g ref="{{fishL3_0Ref}}" style="display: none; fill: #050E16" filter="url(#sw-dof1)"><path d="M -10 0 Q -1 -6.5 11 0 Q -1 6.5 -10 0 Z"></path><path ref="{{tailL3_0Ref}}" d="M -8.5 0 L -17 -6 L -15 0 L -17 6 Z"></path></g>
 </g>
 <g ref="{{fishL4LayerRef}}">
 <g ref="{{fishL4_0Ref}}" style="display: none; fill: #010407" filter="url(#sw-dof2)"><path d="M -10 0 Q -1 -6.5 11 0 Q -1 6.5 -10 0 Z"></path><path ref="{{tailL4_0Ref}}" d="M -8.5 0 L -17 -6 L -15 0 L -17 6 Z"></path></g>
 </g>
+<rect ref="{{veilRef}}" x="-10" y="0" width="410" height="3000" style="fill: #0B4A6A; opacity: 0"></rect>
+</g>
+<path ref="{{surfaceRef}}" d="M 0 0" style="fill: none; stroke: #E8F7FF; stroke-width: 1.6; stroke-linecap: round; opacity: 0.8"></path>
 </svg>
 <div style="position: absolute; left: 24px; right: 24px; top: 30px; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 14px; background: rgba(6,16,27,0.55); border: 1px solid rgba(232,241,242,0.12)">
 <div style="display: flex; justify-content: space-between; align-items: baseline">
@@ -138,6 +175,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <div style="flex-grow: 1; height: 6px; border-radius: 3px; background: rgba(232,241,242,0.12); overflow: hidden">
 <div ref="{{syncRef}}" style="width: 100%; height: 6px; border-radius: 3px; background: {{bodyColor}}; transform-origin: left center; transform: scaleX(0.02)"></div>
 </div>
+<button type="button" onClick="{{onRestart}}" style="min-height: 28px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(232,241,242,0.25); background: transparent; color: #E8F1F2; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer">Restart</button>
 </div>
 </div>
 <div style="position: absolute; left: 0; right: 0; bottom: 26px; display: flex; flex-direction: column; align-items: center; gap: 12px">
@@ -146,6 +184,8 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <div ref="{{cueInRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; color: #E8F1F2; opacity: 0">Breathe in</div>
 <div ref="{{cueOutRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; color: #E8F1F2; opacity: 0">Breathe out</div>
 <div ref="{{cueRestRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; color: #B7C7D1; opacity: 0">Glide</div>
+<div ref="{{cueStartRef}}" style="position: absolute; inset: -4px -40px; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; color: #E8F1F2; opacity: 0">Breathe out to rise</div>
+<div ref="{{cueEndRef}}" style="position: absolute; inset: -4px -40px; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; color: #FFFFFF; opacity: 0">You reached the surface</div>
 </div>
 <div style="width: 180px; height: 4px; border-radius: 2px; background: rgba(232,241,242,0.12); overflow: hidden">
 <div ref="{{swellRef}}" style="width: 180px; height: 4px; border-radius: 2px; background: {{bodyColor}}; transform-origin: center; transform: scaleX(0.12)"></div>
@@ -160,7 +200,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 </div>
 </template>
 <script>
-const PROPS = {"breathsPerMin": 6, "breathNoise": "Brown", "bodyColor": "#8FD3E8"};
+const PROPS = {"breathsPerMin": 6, "ascentHeight": 5000, "breathNoise": "Brown", "bodyColor": "#8FD3E8"};
 
 // ---- minimal runtime: mounts the template, wires bindings, events and refs (stands in for the design-tool runtime) ----
 class DCLogic {
@@ -224,6 +264,8 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
+
 class Component extends DCLogic {
   // ---------- setup ----------
   ref(name) {
@@ -232,6 +274,10 @@ class Component extends DCLogic {
     var self = this;
     if (!this._refs[name]) this._refs[name] = function (el) { self._els[name] = el; };
     return this._refs[name];
+  }
+  restart() {
+    this.sim = null; this.init();
+    this.setState({ pressed: false, readout1: null, readout2: null });
   }
   init() {
     if (this.sim) return;
@@ -245,6 +291,14 @@ class Component extends DCLogic {
     this.sim = {
       c: 0, v: 0, dist: 0, wave: 0, guide: 0, e: null, now: 0,
       holding: false, pressAt: -100, releaseAt: -100,
+      phase: 'start', yOff: 0, vy: 0, fv: 0, rustle: 0, jx: 195,
+      weeds: (function () {
+        var w = [];
+        for (var i = 0; i < 16; i++) w.push({ row: 'B', col: Math.floor(rnd() * 2), x: -10 + rnd() * 410, h: 300 + rnd() * 140, w: 12 + rnd() * 8, ph: rnd() * 6.28, sp: 0.6 + rnd() * 0.5 });
+        // front field: dense across the band where both jellyfish rest, tall enough to rise above their bells
+        for (var j = 0; j < 52; j++) w.push({ row: 'F', col: Math.floor(rnd() * 3), x: j < 40 ? 100 + 280 * (j + rnd()) / 40 : -10 + rnd() * 410, h: 390 + rnd() * 110, w: 24 + rnd() * 14, ph: rnd() * 6.28, sp: 0.6 + rnd() * 0.5 });
+        return w;
+      })(),
       gj: { c: 0, hist: [], wave: 0, v: 0, dist: 0, rel: 0, curLeft: 0, inPow: false },
       fish: {}, sync: 0, syncShown: 0, pushes: 0, kicks: 0, queue: [], curJ: 0, curLeft: 0, psi: 0, amp: 0.85, active: false, rate: null, steady: 0, steadyShown: 0,
       presses: [], exhales: [], hist: [],
@@ -397,6 +451,8 @@ class Component extends DCLogic {
   breathStart() {
     var s = this.sim; if (!s || s.holding) return;
     var t = performance.now() / 1000;
+    s.rustle = 1;
+    if (s.phase === 'start') { s.phase = 'swim'; s.guide = 0.4; }   // the first exhale starts the session, in step with the guide
     var prev = s.presses.length ? s.presses[s.presses.length - 1] : null;
     s.holding = true; s.pressAt = t;
     s.presses.push(t); if (s.presses.length > 4) s.presses.shift();
@@ -549,7 +605,7 @@ class Component extends DCLogic {
     var s = this.sim, el = this._els; if (!s || !el || !el.bellRef) return;
     var dt = s.now ? Math.min(0.05, t - s.now) : 0.016; s.now = t;
     var bpm = this.guideBpm(), gcyc = 60 / bpm;
-    s.guide = (s.guide + dt / gcyc) % 1;
+    if (s.phase !== 'start') s.guide = (s.guide + dt / gcyc) % 1;
     var gph = s.guide, swell;
     if (gph < 0.4) swell = (1 - Math.cos(Math.PI * gph / 0.4)) / 2;
     else if (gph < 0.65) swell = 1 - (1 - Math.cos(Math.PI * (gph - 0.4) / 0.25)) / 2;
@@ -619,10 +675,26 @@ class Component extends DCLogic {
       var left = Math.max(0.03, (0.62 - s.psi) / rate);
       var dJ = s.curLeft * Math.min(1, dt / left);
       s.v += dJ; s.curLeft -= dJ;
+      if (s.phase === 'float') s.fv -= dJ * 0.25;      // a push at the surface lifts it a little
     }
     s.v -= (s.v / 7 + s.v * s.v / 900) * dt;          // the quadratic term sets the top speed, reached around 10 / min
     if (s.v < 0) s.v = 0;
     s.dist += s.v * dt;
+    var S = this.props.ascentHeight ?? 5000;         // the surface sits this far above the seafloor
+    if (s.phase === 'swim' && s.dist >= S) { s.phase = 'breach'; s.yOff = 0; s.vy = s.v; }
+    if (s.phase === 'breach' || s.phase === 'float') s.dist = S;   // the camera stops at the surface
+    var camV = s.phase === 'swim' ? s.v : 0;
+    if (s.phase === 'breach') {
+      // leaps out at whatever speed it carries; gravity pulls it back to the surface
+      s.yOff -= s.vy * dt; s.vy -= 900 * dt;
+      if (s.vy < 0 && s.yOff >= -22) { s.phase = 'float'; s.fv = -s.vy * 0.5; }
+    } else if (s.phase === 'float') {
+      // idle floating: a damped spring around a resting line with a slow bob
+      var rest = -22 + 4 * Math.sin(t * 1.2);
+      s.fv += (-(s.yOff - rest) * 18 - s.fv * 4.5) * dt;
+      s.yOff += s.fv * dt;
+    }
+    s.rustle *= Math.exp(-dt / 1.4);
     s.wave += dt * 2 * Math.PI / (2.6 - 1.2 * e);
     s.hist.push({ t: t, c: s.c, v: s.v });
     while (s.hist.length > 2 && s.hist[1].t < t - 1.2) s.hist.shift();
@@ -634,7 +706,7 @@ class Component extends DCLogic {
     // (same mapping as yours), its colour shows its beat, and it swims with the same impulse physics.
     var G = s.gj, eGs = Math.min(1, Math.max(0, (bpm - 4) / 6));
     var gInPow = s.guide >= 0.4 && s.guide < 0.62;
-    if (gInPow && !G.inPow) G.curLeft = 220 * (0.6 + 2.4 * eGs);
+    if (gInPow && !G.inPow && s.phase === 'swim') G.curLeft = 220 * (0.6 + 2.4 * eGs);
     G.inPow = gInPow;
     if (gInPow && G.curLeft > 0) { var gl = Math.max(0.03, (0.62 - s.guide) * gcyc); var gdJ = G.curLeft * Math.min(1, dt / gl); G.v += gdJ; G.curLeft -= gdJ; }
     G.v -= (G.v / 7 + G.v * G.v / 900) * dt; if (G.v < 0) G.v = 0;
@@ -644,9 +716,11 @@ class Component extends DCLogic {
     G.hist.push({ t: t, c: G.c, v: G.v });
     while (G.hist.length > 2 && G.hist[1].t < t - 1.2) G.hist.shift();
     // relative position: if it out-swims you it pulls ahead (up the screen); if you out-swim it, it drops back
-    G.rel += (G.v - s.v) * dt * 0.6;
+    G.rel += (G.v - camV) * dt * 0.6;
     G.rel -= G.rel * dt / 5;
     G.rel = Math.max(-220, Math.min(220, G.rel));
+    if (s.phase === 'breach' || s.phase === 'float') G.rel += (22 + 4 * Math.sin(t * 1.1 + 1.3) - G.rel) * (1 - Math.exp(-dt / 1.5));
+    if (s.phase === 'start') G.rel = 0;
     this.drawJelly(G, { bell: el.gBellRef, inner: el.gInnerRef, gloss: el.gGlossRef, tent: el.gTentRef }, t, eGs, vTop);
     var gA = 6 + 20 * eGs, gT = 2 + 6 * eGs, gw = 2 * Math.PI * G.dist / 900;
     el.gSwayRef.setAttribute('transform', 'translate(' + (gA * Math.sin(gw)).toFixed(1) + ' ' + (-G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw)).toFixed(2) + ' 305 360)');
@@ -673,7 +747,8 @@ class Component extends DCLogic {
 
     // rising along a vertical sine wave: the path advances with distance swum
     var A = 12 + 46 * e, T = 3 + 9 * e, wph = 2 * Math.PI * s.dist / 900;
-    el.swayRef.setAttribute('transform', 'translate(' + (A * Math.sin(wph)).toFixed(1) + ' 0) rotate(' + (T * Math.cos(wph)).toFixed(2) + ' 195 360)');
+    s.jx = 195 + A * Math.sin(wph);
+    el.swayRef.setAttribute('transform', 'translate(' + (A * Math.sin(wph)).toFixed(1) + ' ' + s.yOff.toFixed(1) + ') rotate(' + (T * Math.cos(wph)).toFixed(2) + ' 195 360)');
     var spd = Math.min(1, s.v / vTop);
     if (el.syncRef) el.syncRef.style.transform = 'scaleX(' + Math.max(0.02, sync).toFixed(3) + ')';
     // sync cues: bioluminescence blooms, particles glow, guidance steps back (it returns as sync fades)
@@ -712,7 +787,7 @@ class Component extends DCLogic {
 
     // speed lines: stretch tracks speed, collapsing to dots well before the water stops
     var mNear = 1.6 + 30 * Math.pow(e, 1.5), mFar = 1 + (mNear - 1) * 0.5;
-    var st = Math.pow(spd, 2.6);
+    var st = Math.pow(Math.min(1, camV / vTop), 2.6);
     function field(pts, H, off, name, rad, m) {
       var out = {};
       for (var i2 = 0; i2 < pts.length; i2++) {
@@ -757,7 +832,7 @@ class Component extends DCLogic {
       for (var q2 = 0; q2 < slots.length; q2++) if (slots[q2]) slots[q2].style.display = 'none';
       F.list = F.list.filter(function (f) {
         f.x += f.dir * f.v * dt;
-        f.y += s.v * cfg.parallax * dt;                // horizontal swimmers; the ascent carries them down, nearer ones faster
+        f.y += camV * cfg.parallax * dt;               // horizontal swimmers; the ascent carries them down, nearer ones faster
         f.ph += dt * (6 + f.v / 12);
         f.bob += dt * 1.3;
         var g = slots[f.slot];
@@ -803,12 +878,55 @@ class Component extends DCLogic {
 
     if ((this.state || {}).sound) this.updateAudio(s, sync, swell, bpm, s.guide);
 
+    // seafloor and seaweed: they start in view, hiding both jellyfish, and fall away as you rise
+    var floorY = 640 + s.dist;
+    if (el.floorRef) el.floorRef.style.display = floorY > 1400 ? 'none' : '';
+    if (el.floorRef && floorY <= 1400) el.floorRef.setAttribute('transform', 'translate(0 ' + s.dist.toFixed(1) + ')');
+    var weedOut = { B0: '', B1: '', F0: '', F1: '', F2: '' };
+    if (floorY - 480 < 900) {
+      for (var wi = 0; wi < s.weeds.length; wi++) {
+        var wd = s.weeds[wi], left = '', right = '', K = 12;
+        for (var wk = 0; wk <= K; wk++) {
+          var wf = wk / K;
+          var sway = (6 + wd.h * 0.025) * Math.sin(t * wd.sp + wd.ph + wf * 2.4) * Math.pow(wf, 1.3);
+          var dxj = wd.x - s.jx;
+          sway += s.rustle * 30 * Math.exp(-Math.abs(dxj) / 70) * wf * (dxj >= 0 ? 1 : -1);   // parts around the jellyfish as it pushes off
+          var wx = wd.x + sway, wy = floorY + 6 - wd.h * wf;
+          var ww = wd.w * (1 - (wd.row === 'F' ? 0.55 : 0.8) * Math.pow(wf, 1.6)) * (0.85 + 0.15 * Math.sin(wf * 9 + wd.ph)) / 2;
+          left += (wk === 0 ? 'M ' : ' L ') + (wx - ww).toFixed(1) + ' ' + wy.toFixed(1);
+          right = ' L ' + (wx + ww).toFixed(1) + ' ' + wy.toFixed(1) + right;
+        }
+        weedOut[wd.row + wd.col] += left + right + ' Z ';
+      }
+    }
+    ['B0', 'B1', 'F0', 'F1', 'F2'].forEach(function (k) { var we = el['weed' + k + 'Ref']; if (we) we.setAttribute('d', weedOut[k] || 'M 0 0'); });
+
+    // the surface: water above it is clipped away, the sky shows through, a wave line marks it
+    var surfaceY = 325 - (S - s.dist);
+    if (el.wclipRef) el.wclipRef.setAttribute('y', Math.max(-4000, surfaceY).toFixed(1));
+    var skyOn = surfaceY > -20;
+    if (el.skyRef) { el.skyRef.style.display = skyOn ? '' : 'none'; if (skyOn) el.skyRef.setAttribute('transform', 'translate(0 ' + surfaceY.toFixed(1) + ')'); }
+    if (el.surfaceRef) {
+      if (surfaceY > -20 && surfaceY < 900) {
+        var sd = '';
+        for (var sx = -10; sx <= 400; sx += 10) sd += (sx === -10 ? 'M ' : ' L ') + sx + ' ' + (surfaceY + 2.5 * Math.sin(sx * 0.035 + t * 1.6) + 1.5 * Math.sin(sx * 0.08 - t * 2.3)).toFixed(1);
+        el.surfaceRef.setAttribute('d', sd);
+      } else el.surfaceRef.setAttribute('d', 'M 0 0');
+    }
+    if (el.veilRef) { el.veilRef.setAttribute('y', Math.max(-4000, surfaceY).toFixed(1)); el.veilRef.style.opacity = surfaceY > -20 ? '0.22' : '0'; }
+
     // guide (driven only by the slider): in 0-40%, out 40-65%, glide 65-100%
     var g = s.guide;
     function win(a0, a1) { var fade = 0.04; return Math.max(0, Math.min(1, Math.min((g - a0) / fade + 1, (a1 - g) / fade + 1))); }
     if (el.cueInRef) el.cueInRef.style.opacity = Math.max(win(0, 0.4), g > 0.97 ? 1 : 0).toFixed(2);
     if (el.cueOutRef) el.cueOutRef.style.opacity = win(0.4, 0.65).toFixed(2);
     if (el.cueRestRef) el.cueRestRef.style.opacity = win(0.65, 0.97).toFixed(2);
+    // start: only the invitation to rise; end: the arrival line. The breathing cues step aside for both.
+    var atStart = s.phase === 'start', atEnd = s.phase === 'float' || s.phase === 'breach';
+    if (atStart || atEnd) { el.cueInRef.style.opacity = '0'; el.cueOutRef.style.opacity = '0'; el.cueRestRef.style.opacity = '0'; }
+    if (el.cueStartRef) el.cueStartRef.style.opacity = atStart ? '1' : '0';
+    if (el.cueEndRef) el.cueEndRef.style.opacity = s.phase === 'float' ? '1' : '0';
+    if (el.guideCueRef && (atStart || atEnd)) el.guideCueRef.style.opacity = '1';
     var sw;
     if (g < 0.4) sw = 0.12 + 0.88 * (1 - Math.cos(Math.PI * g / 0.4)) / 2;
     else if (g < 0.65) sw = 1 - 0.88 * (1 - Math.cos(Math.PI * (g - 0.4) / 0.25)) / 2;
@@ -822,7 +940,7 @@ class Component extends DCLogic {
     var self = this, st = this.state || {};
     var bpm = this.guideBpm();
     var bodyColor = this.props.bodyColor ?? '#8FD3E8';
-    var names = ['farFieldRef', 'nearFieldRef', 'far0_0Ref', 'far0_1Ref', 'far0_2Ref', 'far0_3Ref', 'far0_4Ref', 'far1_0Ref', 'far1_1Ref', 'far1_2Ref', 'far1_3Ref', 'far1_4Ref', 'near0_0Ref', 'near0_1Ref', 'near0_2Ref', 'near0_3Ref', 'near0_4Ref', 'near1_0Ref', 'near1_1Ref', 'near1_2Ref', 'near1_3Ref', 'near1_4Ref', 'near2_0Ref', 'near2_1Ref', 'near2_2Ref', 'near2_3Ref', 'near2_4Ref', 'swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'swellRef', 'syncRef', 'glowRef', 'dimRef', 'guideCueRef', 'pStop0Ref', 'pStop1Ref', 'gStop0Ref', 'gStop1Ref', 'gSwayRef', 'gBodyRef', 'gHaloRef', 'gTentRef', 'gBellRef', 'gInnerRef', 'gGlossRef', 'fishL0LayerRef', 'fishL0_0Ref', 'tailL0_0Ref', 'fishL0_1Ref', 'tailL0_1Ref', 'fishL0_2Ref', 'tailL0_2Ref', 'fishL1LayerRef', 'fishL1_0Ref', 'tailL1_0Ref', 'fishL1_1Ref', 'tailL1_1Ref', 'fishL1_2Ref', 'tailL1_2Ref', 'fishL2LayerRef', 'fishL2_0Ref', 'tailL2_0Ref', 'fishL2_1Ref', 'tailL2_1Ref', 'fishL3LayerRef', 'fishL3_0Ref', 'tailL3_0Ref', 'fishL4LayerRef', 'fishL4_0Ref', 'tailL4_0Ref'];
+    var names = ['farFieldRef', 'nearFieldRef', 'far0_0Ref', 'far0_1Ref', 'far0_2Ref', 'far0_3Ref', 'far0_4Ref', 'far1_0Ref', 'far1_1Ref', 'far1_2Ref', 'far1_3Ref', 'far1_4Ref', 'near0_0Ref', 'near0_1Ref', 'near0_2Ref', 'near0_3Ref', 'near0_4Ref', 'near1_0Ref', 'near1_1Ref', 'near1_2Ref', 'near1_3Ref', 'near1_4Ref', 'near2_0Ref', 'near2_1Ref', 'near2_2Ref', 'near2_3Ref', 'near2_4Ref', 'swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'swellRef', 'syncRef', 'glowRef', 'dimRef', 'guideCueRef', 'wclipRef', 'skyRef', 'floorRef', 'weedB0Ref', 'weedB1Ref', 'weedF0Ref', 'weedF1Ref', 'weedF2Ref', 'veilRef', 'surfaceRef', 'cueStartRef', 'cueEndRef', 'pStop0Ref', 'pStop1Ref', 'gStop0Ref', 'gStop1Ref', 'gSwayRef', 'gBodyRef', 'gHaloRef', 'gTentRef', 'gBellRef', 'gInnerRef', 'gGlossRef', 'fishL0LayerRef', 'fishL0_0Ref', 'tailL0_0Ref', 'fishL0_1Ref', 'tailL0_1Ref', 'fishL0_2Ref', 'tailL0_2Ref', 'fishL1LayerRef', 'fishL1_0Ref', 'tailL1_0Ref', 'fishL1_1Ref', 'tailL1_1Ref', 'fishL1_2Ref', 'tailL1_2Ref', 'fishL2LayerRef', 'fishL2_0Ref', 'tailL2_0Ref', 'fishL2_1Ref', 'tailL2_1Ref', 'fishL3LayerRef', 'fishL3_0Ref', 'tailL3_0Ref', 'fishL4LayerRef', 'fishL4_0Ref', 'tailL4_0Ref'];
     var vals = {};
     names.forEach(function (nm) { vals[nm] = self.ref(nm); });
     return Object.assign(vals, {
@@ -836,6 +954,7 @@ class Component extends DCLogic {
       onFishFg: function (ev) { self.setState({ fishFg: ev.target.checked }); },
       soundOn: !!st.sound,
       onSound: function (ev) { self.setSound(ev.target.checked); },
+      onRestart: function () { self.restart(); },
       onBreathStart: function (ev) { if (ev && ev.preventDefault) ev.preventDefault(); self.breathStart(); },
       onBreathEnd: function () { self.breathEnd(); },
       onKeyStart: function (ev) { if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); if (!ev.repeat) self.breathStart(); } },
