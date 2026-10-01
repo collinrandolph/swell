@@ -61,8 +61,8 @@ A volume swell carries the breathing pattern you sync to; binaural beats add rei
 - **Binaural beats:** standard Starsounds setup, carrier in the left ear and carrier plus beat in the right. Higher-energy rhythms use beats in higher ranges.
 - **Chords:** Starsounds' consonant rule. Tones sit on just-intonation intervals of a root, and each tone's beat scales with its carrier (beat = root beat × carrier / root carrier), so both ears hear the same chord in tune.
 - **Particles:** carry a low-volume binaural beat (the root) that breathes: it swells on the inhale, ebbs on the exhale and nearly vanishes in the glide; its pitch lifts slightly as the breath fills and settles as it empties, and an octave overtone opens at the top of the breath.
-- **Fish:** each fish plays a tuned binaural chord tone rooted on the particle bed, panned with it across the screen. Its volume follows its vertical position: full near the screen's center, softer toward the top and bottom edges, fading to zero off-screen.
-- **Breath noise:** a brown or pink noise undercurrent follows the same breath envelope: warm and dark on the inhale, brighter on the exhale, silent in the glide. Deep and bass-heavy, kept well below the tones.
+- **Fish:** each fish has a calculated binaural pair (a chord tone rooted on the particle bed), but plays it as one plain tone panned with the fish whose pitch glides between the pair's two ear frequencies as it crosses: the left-ear value at the left edge, the right-ear value at the right edge. Its volume follows its vertical position: full near the screen's center, softer toward the top and bottom edges, fading to zero off-screen.
+- **Breath noise:** owned by the environment, not the guides: it keeps pulsing when no jellyfish is on screen. A brown or pink noise undercurrent follows the same breath envelope: warm and dark on the inhale, brighter on the exhale, silent in the glide. Deep and bass-heavy, kept well below the tones.
 - **Turn of the breath:** the sound crests audibly at the top of the inhale, then eases down into a brief soft dip (about half a second, never full silence) before the exhale rises back out of it. No chime or other cliché marker.
 
 ## Sync and transformation
@@ -103,6 +103,11 @@ The phone's microphone reads your breath, so headphones with a mic close to the 
 - **Background noise** interferes; quiet settings work best.
 - **Privacy:** audio should be processed on the device and never recorded.
 - **Push driven by breath:** the swim push is triggered by detected exhales, not by a timer. The prototype uses a hold-to-exhale button in place of the microphone. The guide rhythm only drives the guidance UI and the guide jellyfish.
+- **Detection:** energy between 150 and 4000 Hz relative to a noise floor that follows the quietest recent level. An event starts after 60 ms above the on-threshold (default 8 dB) and ends after 150 ms below the off-threshold. Each event is labelled about 110 ms in from two features (level above the floor and spectral centroid: inhales are typically quieter and brighter) plus the expectation that breaths alternate.
+- **Calibration during y1:** shows a breath count while it listens. The first breath is an exhale ("Breathe out to rise"). Calibration ends once you pass y1 with at least three exhales, then re-sorts every event heard into two groups by its features. If inhales were heard between most exhales (60%+), both drive the jellyfish; otherwise exhales only.
+- **Inhales + exhales:** an inhale opens the bell and holds it open; the exhale's push releases the moment the exhale is heard. Inhale timing against the "Breathe in" cue also counts toward sync.
+- **Exhales only:** works as before. Any event far quieter or far brighter than your exhale profile (more than 3 standard deviations, either check) is ignored and raises the on-threshold (inhale guard) above it, capped below your quietest exhale.
+- **Latency:** events are back-dated by the measured lag (device-reported input latency where available, else ~20 ms estimated, plus half an analysis window and the 60 ms onset hold; about 80 ms). Output latency is reported when sound is on. A true round-trip measurement needs the speaker to reach the mic, which headphones prevent.
 - **No-microphone mode:** the session plays out normally, but your jellyfish's sync and speed are linked to the guide instead of being driven by the microphone.
 
 ## Proposed but not yet agreed

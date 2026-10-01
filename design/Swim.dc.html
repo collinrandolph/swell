@@ -186,6 +186,17 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{fishBgOn}}" onChange="{{onFishBg}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Background fish</label>
 <label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{fishFgOn}}" onChange="{{onFishFg}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Foreground fish</label>
 <label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{soundOn}}" onChange="{{onSound}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Sound (headphones)</label>
+<label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{micOn}}" onChange="{{onMic}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Microphone</label>
+</div>
+<div ref="{{micRowRef}}" style="display: none; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 10px">
+<div style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1; width: 38px">Mic</div>
+<div style="position: relative; flex-grow: 1; height: 6px; border-radius: 3px; background: rgba(232,241,242,0.12); overflow: hidden">
+<div ref="{{micLvlRef}}" style="position: absolute; left: 0; top: 0; width: 100%; height: 6px; background: #E8F1F2; transform-origin: left center; transform: scaleX(0)"></div>
+<div ref="{{micThrRef}}" style="position: absolute; top: 0; left: 27%; width: 2px; height: 6px; background: #F4A259"></div>
+</div>
+</div>
+<div ref="{{micStatusRef}}" style="font-size: 11px; line-height: 1.4; color: #E8F1F2">Listening</div>
 </div>
 <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
 <div ref="{{depthRef}}" style="font-size: 11px; color: #E8F1F2; width: 64px; white-space: nowrap">0 px</div>
@@ -217,7 +228,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"breathsPerMin":{"editor":"range","default":6,"min":3,"max":14,"step":1,"unit":"/min"},"routeY1":{"editor":"range","default":800,"min":0,"max":10000,"step":50,"unit":"px","section":"Route"},"routeBuffer":{"editor":"range","default":400,"min":50,"max":3000,"step":50,"unit":"px","section":"Route"},"routeY2":{"editor":"range","default":1500,"min":50,"max":20000,"step":50,"unit":"px","section":"Route"},"routeY3":{"editor":"range","default":1500,"min":50,"max":20000,"step":50,"unit":"px","section":"Route"},"routeSurface":{"editor":"range","default":600,"min":0,"max":10000,"step":50,"unit":"px","section":"Route"},"guide2PerMin":{"editor":"range","default":9,"min":3,"max":14,"step":1,"unit":"/min"},"breathNoise":{"editor":"enum","default":"Brown","options":["Brown","Pink","Off"]},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"]},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"breathsPerMin":{"editor":"range","default":6,"min":3,"max":14,"step":1,"unit":"/min"},"routeY1":{"editor":"range","default":800,"min":0,"max":10000,"step":50,"unit":"px","section":"Route"},"routeBuffer":{"editor":"range","default":400,"min":50,"max":3000,"step":50,"unit":"px","section":"Route"},"routeY2":{"editor":"range","default":1500,"min":50,"max":20000,"step":50,"unit":"px","section":"Route"},"routeY3":{"editor":"range","default":1500,"min":50,"max":20000,"step":50,"unit":"px","section":"Route"},"routeSurface":{"editor":"range","default":600,"min":0,"max":10000,"step":50,"unit":"px","section":"Route"},"guide2PerMin":{"editor":"range","default":9,"min":3,"max":14,"step":1,"unit":"/min"},"micThreshold":{"editor":"range","default":8,"min":3,"max":20,"step":0.5,"unit":"dB"},"breathNoise":{"editor":"enum","default":"Brown","options":["Brown","Pink","Off"]},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"]},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   // ---------- setup ----------
   ref(name) {
@@ -229,6 +240,7 @@ class Component extends DCLogic {
   }
   restart() {
     this.sim = null; this.init();
+    if (this.mic) { this.mic.mode = 'calibrating'; this.mic.events = []; this.mic.anchor = null; this.mic.prof = null; this.mic.guard = null; this.mic.warn = null; this.mic.lastLabel = null; }
     this.setState({ pressed: false, readout1: null, readout2: null });
   }
   init() {
@@ -264,7 +276,7 @@ class Component extends DCLogic {
     var loop = function (ms) { self._raf = requestAnimationFrame(loop); self.tick(ms / 1000); };
     this._raf = requestAnimationFrame(loop);
   }
-  componentWillUnmount() { cancelAnimationFrame(this._raf); if (this.audio) this.audio.ctx.close(); }
+  componentWillUnmount() { cancelAnimationFrame(this._raf); if (this.audio) this.audio.ctx.close(); this.stopMic(); }
 
   // ---------- sound: tuned binaural chord (Starsounds consonant rule) ----------
   // Root = the particle bed. Every fish depth is a just-intonation chord tone of the root, and its beat scales
@@ -282,9 +294,18 @@ class Component extends DCLogic {
       oL.start(); oR.start();
       return { oL: oL, oR: oR, gL: gL, gR: gR };
     }
+    // fish: one plain tone each, panned with the fish. Its pitch glides between the two ear frequencies of its
+    // binaural pair as it crosses: at the left edge it plays the left-ear value, at the right edge the right-ear value.
+    function mono() {
+      var o = ctx.createOscillator(), g = ctx.createGain(), pn = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      o.type = 'sine'; g.gain.value = 0; o.connect(g);
+      if (pn) { g.connect(pn); pn.connect(master); } else g.connect(master);
+      o.start();
+      return { o: o, g: g, pn: pn };
+    }
     var voices = {};
     var plan = { L0: 3, L1: 3, L2: 2, L3: 1, L4: 1 };
-    Object.keys(plan).forEach(function (key) { for (var q = 0; q < plan[key]; q++) voices[key + '_' + q] = binaural(); });
+    Object.keys(plan).forEach(function (key) { for (var q = 0; q < plan[key]; q++) voices[key + '_' + q] = mono(); });
     // breath noise: brown and pink beds (stereo, decorrelated), each through a low-pass that opens and closes with the breath
     function noiseBuf(kind) {
       var n = ctx.sampleRate * 4, nb = ctx.createBuffer(2, n, ctx.sampleRate);
@@ -373,7 +394,7 @@ class Component extends DCLogic {
     if (gph < 0.4) cut = lo + (hi * 0.65 - lo) * ease(gph / 0.4);
     else if (gph < 0.65) cut = hi + (lo - hi) * ease((gph - 0.4) / 0.25);
     else cut = lo;
-    var nVol = (0.022 + 0.014 * sync) * env * (kind === 'Pink' ? 0.75 : 1) * gw;  // a gentle undercurrent beneath the tones (slightly raised: the steeper filter removes energy)
+    var nVol = (0.022 + 0.014 * sync) * env * (kind === 'Pink' ? 0.75 : 1);   // owned by the environment: keeps pulsing when no guide is on screen  // a gentle undercurrent beneath the tones (slightly raised: the steeper filter removes energy)
     ['Brown', 'Pink'].forEach(function (nk) {
       var nc = a.noise[nk];
       nc.lp.frequency.setTargetAtTime(cut, now, 0.08);
@@ -385,9 +406,11 @@ class Component extends DCLogic {
     Object.keys(a.voices).forEach(function (id) {
       var key = id.split('_')[0], slot = +id.split('_')[1], v = a.voices[id];
       var ratio = DEPTH[key][0], c = Math.max(50, Math.min(500, C0 * ratio));
-      tune(v, c, Math.min(30, B0 * c / C0));
+      var bt = Math.min(30, B0 * c / C0);
       var F = s.fish[key], f = F ? F.list.filter(function (x) { return x.slot === slot; })[0] : null;
       var vol = 0, pan = 0;
+      var u = f ? Math.max(0, Math.min(1, f.x / 390)) : 0.5;
+      v.o.frequency.setTargetAtTime(c + bt * u, now, 0.05);   // left edge = left-ear value (c), right edge = right-ear value (c + beat)
       if (f) {
         // vertical: full at the centre of the screen, softer toward the edges, fading to zero off-screen
         var dy = Math.abs(f.y - 422) / 422, yF;
@@ -396,13 +419,208 @@ class Component extends DCLogic {
         // horizontal: fades in and out at the screen sides
         var over = Math.max(0, Math.abs(f.x - 195) - 195) / (30 + 14 * f.size);
         vol = DEPTH[key][1] * yF * Math.max(0, 1 - over) * gw;   // fish only sing while a guide jellyfish is on screen
-        pan = (f.x - 195) / 230;
+        pan = Math.max(-0.95, Math.min(0.95, (f.x - 195) / 195));
       }
-      level(v, vol, pan);
+      v.g.gain.setTargetAtTime(vol, now, 0.1);
+      if (v.pn) v.pn.pan.setTargetAtTime(pan, now, 0.05);
     });
   }
 
-  // ---------- breath input (stands in for the microphone: down = exhale detected, up = exhale ended) ----------
+
+  // ---------- microphone breath detection ----------
+  // Breath is broadband noise, so the detector listens to energy between 150 and 4000 Hz. A floor that follows the
+  // quietest recent level gives "dB above the room"; an event starts after 60 ms above the on-threshold and ends after
+  // 150 ms below the off-threshold. Each event is labelled exhale or inhale about 110 ms in, from two features
+  // (level above the floor, spectral centroid) plus the expectation that breaths alternate.
+  setMic(on) {
+    var self = this;
+    if (!on) { this.stopMic(); this.micErr = null; this.setState({ mic: false }); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { this.micErr = 'No microphone available here'; this.setState({ mic: false }); return; }
+    this.micErr = 'Asking for the microphone';
+    this.setState({ mic: true });
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }).then(function (stream) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      var ctx = new AC(), src = ctx.createMediaStreamSource(stream), hp = ctx.createBiquadFilter(), an = ctx.createAnalyser();
+      hp.type = 'highpass'; hp.frequency.value = 100; an.fftSize = 1024; an.smoothingTimeConstant = 0;
+      src.connect(hp); hp.connect(an); ctx.resume();
+      var track = stream.getAudioTracks()[0], set = track && track.getSettings ? track.getSettings() : {};
+      var inLat = typeof set.latency === 'number' ? set.latency : null;
+      var frame = an.fftSize / ctx.sampleRate;
+      var lag = (inLat == null ? 0.02 : inLat) + frame / 2 + 0.06;      // device input + half an analysis window + onset hold
+      self.mic = { ctx: ctx, stream: stream, an: an, buf: new Float32Array(an.frequencyBinCount), sr: ctx.sampleRate,
+        floor: null, eS: -140, rel: 0, ev: null, above: 0, below: 0, lag: lag, inLat: inLat,
+        mode: 'calibrating', events: [], anchor: null, lastLabel: null, prof: null, guard: null, warn: null };
+      self.micErr = null;
+    }).catch(function (err) { self.micErr = 'Microphone unavailable (' + ((err && err.name) || 'error') + ')'; self.setState({ mic: false }); });
+  }
+  stopMic() {
+    var m = this.mic; if (!m) return;
+    m.stream.getTracks().forEach(function (tr) { tr.stop(); }); m.ctx.close(); this.mic = null;
+  }
+  micOnThreshold() {
+    var base = this.props.micThreshold ?? 8, m = this.mic;
+    return m && m.mode === 'exhale' && m.guard != null ? Math.max(base, m.guard) : base;
+  }
+  micFrame(t, dt) {
+    var m = this.mic; if (!m) return;
+    m.an.getFloatFrequencyData(m.buf);
+    var binHz = m.sr / m.an.fftSize, pw = 0, pc = 0;
+    var lo = Math.floor(150 / binHz), hi = Math.min(m.buf.length - 1, Math.ceil(4000 / binHz));
+    for (var i = lo; i <= hi; i++) { var q = Math.pow(10, m.buf[i] / 10); pw += q; pc += q * i * binHz; }
+    var e = 10 * Math.log10(pw + 1e-14), cen = pw > 0 ? pc / pw : 0;
+    if (m.warm == null) { m.warm = 0; m.eS = e; }
+    m.eS += (e - m.eS) * (1 - Math.exp(-dt / (e > m.eS ? 0.03 : 0.09)));       // fast attack, slower release
+    if (m.warm < 1) { m.warm += dt; m.floor = m.floor == null ? m.eS : Math.min(m.floor + (m.eS - m.floor) * 0.2, m.eS); m.rel = 0; return; }   // learn the room for a second first
+    if (!m.ev) m.floor += (m.eS - m.floor) * (1 - Math.exp(-dt / (m.eS < m.floor ? 0.3 : 6)));   // the floor sinks quickly, rises slowly
+    var rel = m.eS - m.floor; m.rel = rel;
+    var onT = this.micOnThreshold(), offT = Math.max(2.5, onT * 0.45);
+    if (!m.ev) {
+      m.above = rel > onT ? m.above + dt : 0;
+      if (m.above >= 0.06) { m.ev = { t0: t - m.lag, levels: [], cens: [], peak: rel, dur: 0, decided: false }; m.below = 0; }
+    } else {
+      var ev = m.ev; ev.dur = t - ev.t0; ev.peak = Math.max(ev.peak, rel);
+      if (ev.levels.length < 7) { ev.levels.push(rel); ev.cens.push(cen); }
+      if (!ev.decided && ev.levels.length >= 7) this.micDecide(ev);
+      m.below = rel < offT ? m.below + dt : 0;
+      if (m.below >= 0.15) this.micEnd(ev);
+      else if (ev.dur > 8) { this.micEnd(ev); m.floor = m.eS; }    // nothing breathes out for 8 s: the room got louder, re-learn the floor
+    }
+  }
+  micFeat(ev) {
+    var a = 0, c = 0; for (var i = 0; i < ev.levels.length; i++) { a += ev.levels[i]; c += ev.cens[i]; }
+    return [a / ev.levels.length, Math.log2(Math.max(60, c / ev.levels.length))];
+  }
+  micClassify(f) {
+    var m = this.mic, P = m.prof, best = null, bs = -1e9;
+    ['ex', 'in'].forEach(function (k) {
+      var sc = 0;
+      for (var j = 0; j < 2; j++) { var z = (f[j] - P[k].mu[j]) / P[k].sd[j]; sc -= 0.5 * z * z + Math.log(P[k].sd[j]); }
+      sc += Math.log(m.lastLabel == null ? 0.5 : (m.lastLabel === k ? 0.25 : 0.75));   // breaths alternate
+      if (sc > bs) { bs = sc; best = k; }
+    });
+    return best;
+  }
+  micDecide(ev) {
+    var m = this.mic; ev.decided = true; ev.f = this.micFeat(ev);
+    var label;
+    if (m.mode === 'both') label = this.micClassify(ev.f);
+    else if (m.mode === 'exhale') {
+      // exhales only: anything far quieter or far brighter than your exhales (two independent checks) is a stray
+      // inhale or room noise. It doesn't push, and the guard rises above it for next time.
+      var P = m.prof.ex;
+      var stray = ev.f[0] < P.mu[0] - 3 * P.sd[0] || ev.f[1] > P.mu[1] + 3 * P.sd[1];
+      label = stray ? 'x' : 'ex';
+      if (stray) {
+        var cap = m.exPeakMin != null ? m.exPeakMin - 2 : Infinity;
+        m.guard = Math.min(cap, Math.max(m.guard || 0, ev.peak + 2));
+      }
+    }
+    else {
+      // calibrating: the first breath is an exhale ("Breathe out to rise"); later events that are clearly quieter
+      // or brighter than the exhales so far are inhale candidates
+      if (!m.anchor) { m.anchor = ev.f.slice(); label = 'ex'; }
+      else {
+        var exs = m.events.filter(function (x) { return x.label === 'ex'; }).map(function (x) { return x.f; }).concat([m.anchor]);
+        var r0 = 0, r1 = 0; exs.forEach(function (x) { r0 += x[0]; r1 += x[1]; }); r0 /= exs.length; r1 /= exs.length;
+        // both cues must agree (quieter AND brighter), and two inhales never come in a row
+        label = (m.lastLabel !== 'in' && ev.f[0] < r0 - 4 && ev.f[1] > r1 + 0.25) ? 'in' : 'ex';
+      }
+    }
+    ev.label = label;
+    if (label === 'ex') this.breathStart(ev.t0); else if (label === 'in') this.inhaleStart(ev.t0);
+  }
+  micEnd(ev) {
+    var m = this.mic; m.ev = null;
+    if (!ev.decided) { ev.f = this.micFeat(ev); ev.label = m.mode === 'both' && m.prof ? this.micClassify(ev.f) : 'ex'; ev.decided = true; if (ev.label === 'ex') this.breathStart(ev.t0); else this.inhaleStart(ev.t0); }
+    if (ev.label === 'ex') this.breathEnd(); else if (ev.label === 'in') this.inhaleEnd();
+    if (ev.label === 'x' && m.guard != null) m.guard = Math.min(m.exPeakMin != null ? m.exPeakMin - 2 : Infinity, Math.max(m.guard, ev.peak + 2));
+    if (ev.label !== 'x') m.lastLabel = ev.label;
+    if (ev.dur >= 0.25) { m.events.push({ t0: ev.t0, f: ev.f, peak: ev.peak, dur: ev.dur, label: ev.label }); if (m.events.length > 60) m.events.shift(); }
+  }
+  micFinalize() {
+    var m = this.mic, evs = m.events.slice();
+    // Re-sort everything heard so far into two groups by its features (2-means on level and centroid),
+    // so a wrong live guess during calibration doesn't stick. Exhales are the louder group.
+    if (evs.length >= 3) {
+      var cA = evs.reduce(function (p, x) { return x.f[0] > p.f[0] ? x : p; }).f.slice();
+      var cB = evs.reduce(function (p, x) { return x.f[0] < p.f[0] ? x : p; }).f.slice();
+      var asg = [];
+      for (var it = 0; it < 8; it++) {
+        asg = evs.map(function (x) {
+          var dA = Math.pow((x.f[0] - cA[0]) / 4, 2) + Math.pow((x.f[1] - cA[1]) / 0.3, 2);
+          var dB = Math.pow((x.f[0] - cB[0]) / 4, 2) + Math.pow((x.f[1] - cB[1]) / 0.3, 2);
+          return dA <= dB ? 'A' : 'B';
+        });
+        [['A', cA], ['B', cB]].forEach(function (pair) {
+          var mem = evs.filter(function (x, k) { return asg[k] === pair[0]; });
+          if (mem.length) { pair[1][0] = mem.reduce(function (p, x) { return p + x.f[0]; }, 0) / mem.length; pair[1][1] = mem.reduce(function (p, x) { return p + x.f[1]; }, 0) / mem.length; }
+        });
+      }
+      var sepd = Math.abs(cA[0] - cB[0]) / 4 + Math.abs(cA[1] - cB[1]) / 0.3;
+      var hasB = asg.indexOf('B') >= 0;
+      evs.forEach(function (x, k) { x.label = !hasB || sepd < 2 || asg[k] === 'A' ? 'ex' : 'in'; });
+    }
+    var ex = evs.filter(function (x) { return x.label === 'ex'; }), inn = evs.filter(function (x) { return x.label === 'in'; });
+    // timing cue: if the features found no inhales but the events come in short-long pairs, both are audible and alike
+    if (inn.length < 2 && evs.length >= 6) {
+      var g0 = 0, g1 = 0, n0 = 0, n1 = 0;
+      for (var i = 1; i < evs.length; i++) { var gp = evs[i].t0 - evs[i - 1].t0; if (i % 2) { g0 += gp; n0++; } else { g1 += gp; n1++; } }
+      if (n0 && n1 && (g0 / n0) / (g1 / n1) > 1.6) evs.forEach(function (x, k) { x.label = k % 2 ? 'in' : 'ex'; });
+      ex = evs.filter(function (x) { return x.label === 'ex'; }); inn = evs.filter(function (x) { return x.label === 'in'; });
+    }
+    // how often an inhale sits between two exhales
+    var between = 0;
+    for (var k2 = 1; k2 < ex.length; k2++) if (inn.some(function (x) { return x.t0 > ex[k2 - 1].t0 && x.t0 < ex[k2].t0; })) between++;
+    var alt = ex.length > 1 ? between / (ex.length - 1) : 0;
+    function stats(arr) {
+      var mu = [0, 0], sd = [0, 0];
+      arr.forEach(function (x) { mu[0] += x.f[0]; mu[1] += x.f[1]; }); mu[0] /= arr.length; mu[1] /= arr.length;
+      arr.forEach(function (x) { sd[0] += Math.pow(x.f[0] - mu[0], 2); sd[1] += Math.pow(x.f[1] - mu[1], 2); });
+      sd[0] = Math.max(3, Math.sqrt(sd[0] / arr.length)); sd[1] = Math.max(0.15, Math.sqrt(sd[1] / arr.length));
+      var dur = 0; arr.forEach(function (x) { dur += x.dur; });
+      return { mu: mu, sd: sd, dur: dur / arr.length };
+    }
+    if (inn.length >= 2 && alt >= 0.6) {
+      m.mode = 'both'; m.prof = { ex: stats(ex), in: stats(inn) };
+    } else {
+      m.mode = 'exhale'; m.prof = { ex: stats(ex.length ? ex : evs) };
+      if (inn.length) {
+        // sporadic loud inhales: raise the on-threshold above them, but keep it below the quietest exhale peak
+        var inPk = Math.max.apply(null, inn.map(function (x) { return x.peak; })) + 2;
+        var exPk = Math.min.apply(null, ex.map(function (x) { return x.peak; })) - 2;
+        if (inPk > exPk) { m.guard = (inPk + exPk) / 2; m.warn = 'loud inhales overlap quiet exhales'; } else m.guard = inPk;
+      }
+    }
+    m.calExhales = ex.length;
+    if (ex.length) m.exPeakMin = Math.min.apply(null, ex.map(function (x) { return x.peak; }));
+  }
+  micStatus() {
+    var m = this.mic; if (!m) return this.micErr || '';
+    var lag = Math.round(m.lag * 1000) + ' ms lag' + (m.inLat == null ? ' (est.)' : '');
+    var outLat = this.audio && this.audio.ctx ? (this.audio.ctx.baseLatency || 0) + (this.audio.ctx.outputLatency || 0) : null;
+    var outTxt = outLat ? ' · out ' + Math.round(outLat * 1000) + ' ms' : '';
+    if (m.mode === 'calibrating') {
+      var ne = m.events.filter(function (x) { return x.label === 'ex'; }).length, ni = m.events.filter(function (x) { return x.label === 'in'; }).length;
+      return 'Calibrating · ' + ne + ' breath' + (ne === 1 ? '' : 's') + ' · inhales heard ' + ni + ' · ' + lag + outTxt;
+    }
+    if (m.mode === 'both') return 'Inhales + exhales · ' + lag + outTxt;
+    var nx = m.events.filter(function (x) { return x.label === 'x'; }).length;
+    return 'Exhales only' + (m.guard != null ? ' · inhale guard ' + m.guard.toFixed(1) + ' dB' : '') + (nx ? ' · ' + nx + ' ignored' : '') + (m.warn ? ' (' + m.warn + ')' : '') + ' · ' + lag + outTxt;
+  }
+  // an inhale opens the bell (and holds it open) ready for the exhale's push; it also scores against the "Breathe in" cue
+  inhaleStart(tEv) {
+    var s = this.sim; if (!s) return;
+    var now = performance.now() / 1000; tEv = tEv == null ? now : tEv;
+    s.inhaling = true; s.inhaleAt = tEv;
+    if (s.phase === 'start') return;
+    s.active = true;
+    var cyc = 60 / this.guideBpm(), gp = s.guide - (now - tEv) / cyc, off = gp * cyc;
+    off = ((off % cyc) + cyc) % cyc; if (off > cyc / 2) off -= cyc;
+    s.inQ = Math.max(0, 1 - Math.abs(off) / (0.2 * cyc)); s.inQAt = now;
+  }
+  inhaleEnd() { var s = this.sim; if (!s) return; s.inhaling = false; s.inhaleEndAt = performance.now() / 1000; }
+
+  // ---------- breath input (button stands in for the microphone: down = exhale detected, up = exhale ended) ----------
   guide1Bpm() { var st = this.state || {}; return st.bpm ?? (this.props.breathsPerMin ?? 6); }
   guide2Bpm() { var st = this.state || {}; return st.bpm2 ?? (this.props.guide2PerMin ?? 9); }
   // the jellyfish currently with you sets the rhythm (between guides, the last one's rhythm keeps time unseen)
@@ -425,9 +643,9 @@ class Component extends DCLogic {
     if (m < a[5]) return { idx: 2, w: 1 };
     return { idx: 2, w: 1 - ease((m - a[5]) / b) };
   }
-  breathStart() {
+  breathStart(tEv) {
     var s = this.sim; if (!s || s.holding) return;
-    var t = performance.now() / 1000;
+    var nowB = performance.now() / 1000, t = tEv == null ? nowB : tEv;
     s.rustle = 1;
     if (s.phase === 'start') { s.phase = 'swim'; s.guide = 0.4; }   // the first exhale starts the session, in step with the guide
     var prev = s.presses.length ? s.presses[s.presses.length - 1] : null;
@@ -436,7 +654,8 @@ class Component extends DCLogic {
     // how well this breath lands: its timing against the guide's exhale cue (phase)
     // and the gap since your last breath against the guide's cycle (rhythm)
     var cyc = 60 / this.guideBpm();
-    var off = (s.guide - 0.4) * cyc;
+    var off = (s.guide - (nowB - t) / cyc - 0.4) * cyc;
+    off = ((off % cyc) + cyc) % cyc;
     if (off > cyc / 2) off -= cyc; if (off < -cyc / 2) off += cyc;
     s.lastOffset = off;
     var phaseQ = Math.max(0, 1 - Math.abs(off) / (0.2 * cyc));
@@ -444,6 +663,7 @@ class Component extends DCLogic {
     s.lastInterval = interval;
     var rateQ = interval == null ? 0.4 : Math.max(0, 1 - Math.abs(interval - cyc) / (0.25 * cyc));
     var q = phaseQ * rateQ;
+    if (s.inQAt != null && nowB - s.inQAt < cyc) { q *= 0.6 + 0.4 * s.inQ; s.inQAt = null; }   // a heard inhale also counts
     s.lastQ = q;
     // SYNC with the guide: each breath pulls it a step toward how well it landed
     if ((s.gw ?? 0) >= 0.5) s.sync += (q - s.sync) * 0.3;   // only breaths taken with a guide count toward sync
@@ -582,6 +802,21 @@ class Component extends DCLogic {
     var s = this.sim, el = this._els; if (!s || !el || !el.bellRef) return;
     var dt = s.now ? Math.min(0.05, t - s.now) : 0.016; s.now = t;
     // where you are on the route decides which guide is with you and how present it is (0 = absent, 1 = beside you)
+    if (this.mic) {
+      this.micFrame(t, dt);
+      if (this.mic.mode === 'calibrating' && s.dist >= (this.props.routeY1 ?? 800) && this.mic.events.filter(function (x) { return x.label === 'ex'; }).length >= 3) this.micFinalize();
+    }
+    if (el.micRowRef) {
+      var micShow = !!(this.mic || this.micErr);
+      el.micRowRef.style.display = micShow ? 'flex' : 'none';
+      if (micShow) {
+        var mst = this.micStatus(); if (el.micStatusRef.textContent !== mst) el.micStatusRef.textContent = mst;
+        var mr = this.mic ? Math.max(0, Math.min(1, this.mic.rel / 30)) : 0;
+        el.micLvlRef.style.transform = 'scaleX(' + mr.toFixed(3) + ')';
+        el.micLvlRef.style.background = this.mic && this.mic.ev ? (this.mic.ev.label === 'in' ? '#B9A7F0' : '#8FD3E8') : '#E8F1F2';
+        el.micThrRef.style.left = (Math.min(1, this.micOnThreshold() / 30) * 100).toFixed(1) + '%';
+      }
+    }
     var ga = this.guideAt(s.dist);
     if (ga.idx && ga.idx !== s.gIdx) {
       s.gj = { c: 0, hist: [], wave: 0, v: 0, dist: 0, rel: 0, curLeft: 0, inPow: false };   // a new jellyfish arrives
@@ -643,7 +878,15 @@ class Component extends DCLogic {
       rate = Math.max(rate, toStroke / 0.22);
     }
     var prevPsi = s.psi;
-    if (s.active) s.psi = s.psi + rate * dt;
+    var inDur = this.mic && this.mic.prof && this.mic.prof.in ? this.mic.prof.in.dur : 1.5;
+    if (s.inhaling) s.active = true;
+    var relaxing = !s.inhaling && !owed && s.psi > 0 && s.psi < 0.4 && s.inhaleEndAt && t - s.inhaleEndAt > 1.2;
+    if (s.inhaling && !owed && s.psi < 0.4) rate = 0.38 / Math.max(0.6, inDur);    // open in step with the inhale
+    var waitEx = !s.inhaling && !owed && s.psi > 0 && s.psi < 0.4 && s.inhaleEndAt && t - s.inhaleEndAt <= 1.2;
+    if (relaxing) { s.psi = Math.max(0, s.psi - 0.4 * dt); if (s.psi === 0) s.active = false; }   // an inhale with no exhale: settle back
+    else if (waitEx) { /* top of the breath: stay open for the exhale */ }
+    else if (s.active) s.psi = s.psi + rate * dt;
+    if (s.inhaling && !owed && s.psi < 0.4) s.psi = Math.min(s.psi, 0.38);         // hold open until the exhale
     if (s.psi >= 1) {
       s.psi -= 1;
       if (!owed) { s.active = false; s.psi = 0; }         // nothing owed: finish the glide and rest
@@ -983,7 +1226,7 @@ class Component extends DCLogic {
     var self = this, st = this.state || {};
     var bpm = this.guide1Bpm();
     var bodyColor = this.props.bodyColor ?? '#8FD3E8';
-    var names = ['farFieldRef', 'nearFieldRef', 'far0_0Ref', 'far0_1Ref', 'far0_2Ref', 'far0_3Ref', 'far0_4Ref', 'far1_0Ref', 'far1_1Ref', 'far1_2Ref', 'far1_3Ref', 'far1_4Ref', 'near0_0Ref', 'near0_1Ref', 'near0_2Ref', 'near0_3Ref', 'near0_4Ref', 'near1_0Ref', 'near1_1Ref', 'near1_2Ref', 'near1_3Ref', 'near1_4Ref', 'near2_0Ref', 'near2_1Ref', 'near2_2Ref', 'near2_3Ref', 'near2_4Ref', 'swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'swellRef', 'syncRef', 'glowRef', 'dimRef', 'guideCueRef', 'hStop0Ref', 'hStop1Ref', 'hSwayRef', 'hBodyRef', 'hHaloRef', 'hTentRef', 'hBellRef', 'hInnerRef', 'hGlossRef', 'depthRef', 'wclipRef', 'skyRef', 'floorRef', 'weedB0Ref', 'weedB1Ref', 'weedF0Ref', 'weedF1Ref', 'weedF2Ref', 'veilRef', 'surfaceRef', 'cueStartRef', 'cueEndRef', 'pStop0Ref', 'pStop1Ref', 'gStop0Ref', 'gStop1Ref', 'gSwayRef', 'gBodyRef', 'gHaloRef', 'gTentRef', 'gBellRef', 'gInnerRef', 'gGlossRef', 'fishL0LayerRef', 'fishL0_0Ref', 'tailL0_0Ref', 'fishL0_1Ref', 'tailL0_1Ref', 'fishL0_2Ref', 'tailL0_2Ref', 'fishL1LayerRef', 'fishL1_0Ref', 'tailL1_0Ref', 'fishL1_1Ref', 'tailL1_1Ref', 'fishL1_2Ref', 'tailL1_2Ref', 'fishL2LayerRef', 'fishL2_0Ref', 'tailL2_0Ref', 'fishL2_1Ref', 'tailL2_1Ref', 'fishL3LayerRef', 'fishL3_0Ref', 'tailL3_0Ref', 'fishL4LayerRef', 'fishL4_0Ref', 'tailL4_0Ref'];
+    var names = ['farFieldRef', 'nearFieldRef', 'far0_0Ref', 'far0_1Ref', 'far0_2Ref', 'far0_3Ref', 'far0_4Ref', 'far1_0Ref', 'far1_1Ref', 'far1_2Ref', 'far1_3Ref', 'far1_4Ref', 'near0_0Ref', 'near0_1Ref', 'near0_2Ref', 'near0_3Ref', 'near0_4Ref', 'near1_0Ref', 'near1_1Ref', 'near1_2Ref', 'near1_3Ref', 'near1_4Ref', 'near2_0Ref', 'near2_1Ref', 'near2_2Ref', 'near2_3Ref', 'near2_4Ref', 'swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'swellRef', 'syncRef', 'glowRef', 'dimRef', 'guideCueRef', 'micRowRef', 'micLvlRef', 'micThrRef', 'micStatusRef', 'hStop0Ref', 'hStop1Ref', 'hSwayRef', 'hBodyRef', 'hHaloRef', 'hTentRef', 'hBellRef', 'hInnerRef', 'hGlossRef', 'depthRef', 'wclipRef', 'skyRef', 'floorRef', 'weedB0Ref', 'weedB1Ref', 'weedF0Ref', 'weedF1Ref', 'weedF2Ref', 'veilRef', 'surfaceRef', 'cueStartRef', 'cueEndRef', 'pStop0Ref', 'pStop1Ref', 'gStop0Ref', 'gStop1Ref', 'gSwayRef', 'gBodyRef', 'gHaloRef', 'gTentRef', 'gBellRef', 'gInnerRef', 'gGlossRef', 'fishL0LayerRef', 'fishL0_0Ref', 'tailL0_0Ref', 'fishL0_1Ref', 'tailL0_1Ref', 'fishL0_2Ref', 'tailL0_2Ref', 'fishL1LayerRef', 'fishL1_0Ref', 'tailL1_0Ref', 'fishL1_1Ref', 'tailL1_1Ref', 'fishL1_2Ref', 'tailL1_2Ref', 'fishL2LayerRef', 'fishL2_0Ref', 'tailL2_0Ref', 'fishL2_1Ref', 'tailL2_1Ref', 'fishL3LayerRef', 'fishL3_0Ref', 'tailL3_0Ref', 'fishL4LayerRef', 'fishL4_0Ref', 'tailL4_0Ref'];
     var vals = {};
     names.forEach(function (nm) { vals[nm] = self.ref(nm); });
     return Object.assign(vals, {
@@ -1000,6 +1243,8 @@ class Component extends DCLogic {
       onFishFg: function (ev) { self.setState({ fishFg: ev.target.checked }); },
       soundOn: !!st.sound,
       onSound: function (ev) { self.setSound(ev.target.checked); },
+      micOn: !!st.mic,
+      onMic: function (ev) { self.setMic(ev.target.checked); },
       onRestart: function () { self.restart(); },
       onBreathStart: function (ev) { if (ev && ev.preventDefault) ev.preventDefault(); self.breathStart(); },
       onBreathEnd: function () { self.breathEnd(); },
