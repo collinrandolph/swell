@@ -100,6 +100,7 @@ The phone's microphone reads your breath, so headphones with a mic close to the 
 - **Background noise** interferes; quiet settings work best.
 - **Privacy:** audio should be processed on the device and never recorded.
 - **Push driven by breath:** the swim push is triggered by detected exhales, not by a timer. The prototype uses a hold-to-exhale button in place of the microphone. The guide rhythm only drives the guidance UI and the guide jellyfish.
+- **No-microphone mode:** the session plays out normally, but your jellyfish's sync and speed are linked to the guide instead of being driven by the microphone.
 
 ## Proposed but not yet agreed
 
