@@ -30,6 +30,10 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <stop ref="{{pStop0Ref}}" offset="0" style="stop-color: {{bodyColor}}; stop-opacity: 0.95"></stop>
 <stop ref="{{pStop1Ref}}" offset="1" style="stop-color: {{bodyColor}}; stop-opacity: 0.4"></stop>
 </linearGradient>
+<linearGradient id="sw-hbellfill" x1="0" y1="0" x2="0" y2="1">
+<stop ref="{{hStop0Ref}}" offset="0" style="stop-color: #C9A7F0; stop-opacity: 0.95"></stop>
+<stop ref="{{hStop1Ref}}" offset="1" style="stop-color: #C9A7F0; stop-opacity: 0.4"></stop>
+</linearGradient>
 <linearGradient id="sw-gbellfill" x1="0" y1="0" x2="0" y2="1">
 <stop ref="{{gStop0Ref}}" offset="0" style="stop-color: #B9A7F0; stop-opacity: 0.95"></stop>
 <stop ref="{{gStop1Ref}}" offset="1" style="stop-color: #B9A7F0; stop-opacity: 0.4"></stop>
@@ -119,6 +123,17 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <path ref="{{weedB0Ref}}" d="M 0 0" style="fill: #0B2A22"></path>
 <path ref="{{weedB1Ref}}" d="M 0 0" style="fill: #0E3328"></path>
 </g>
+<g ref="{{hSwayRef}}" style="display: none">
+<g ref="{{hBodyRef}}">
+<svg x="245" y="285" width="120" height="190" viewBox="0 0 240 380" style="overflow: visible">
+<ellipse ref="{{hHaloRef}}" cx="120" cy="125" rx="90" ry="80" filter="url(#sw-halo)" style="fill: #C9A7F0; opacity: 0.2"></ellipse>
+<path ref="{{hTentRef}}" d="M 0 0" style="fill: none; stroke: #C9A7F0; stroke-opacity: 0.55; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round"></path>
+<path ref="{{hBellRef}}" d="M 0 0" style="fill: url(#sw-hbellfill); stroke: #C9A7F0; stroke-width: 3; stroke-linejoin: round"></path>
+<path ref="{{hInnerRef}}" d="M 0 0" style="fill: #FFFFFF; opacity: 0.12"></path>
+<ellipse ref="{{hGlossRef}}" cx="90" cy="100" rx="20" ry="10" style="fill: #FFFFFF; opacity: 0.2"></ellipse>
+</svg>
+</g>
+</g>
 <g ref="{{gSwayRef}}">
 <g ref="{{gBodyRef}}">
 <svg x="245" y="285" width="120" height="190" viewBox="0 0 240 380" style="overflow: visible">
@@ -166,7 +181,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <span>Faster</span>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px">
-<label for="sw-guide2" style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1">Guide 2 rhythm</label>
+<label for="sw-guide2" style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1">Guide 2 rhythm (pair)</label>
 <div style="font-size: 12px; color: #E8F1F2">{{guide2Label}}</div>
 </div>
 <input id="sw-guide2" type="range" min="3" max="14" step="0.5" value="{{bpm2}}" onChange="{{onGuide2}}" style="width: 100%; height: 28px; margin: 0; accent-color: {{bodyColor}}">
@@ -365,7 +380,7 @@ class Component extends DCLogic {
       src.connect(lp); lp.connect(lp2); lp2.connect(g); g.connect(master); src.start();
       return { lp: lp, lp2: lp2, g: g };
     }
-    this.audio = { ctx: ctx, bed: binaural(), bedHi: binaural(), voices: voices, noise: { Brown: noiseChain('brown'), Pink: noiseChain('pink') } };
+    this.audio = { ctx: ctx, bed: binaural(), bedHi: binaural(), bed2: binaural(), voices: voices, noise: { Brown: noiseChain('brown'), Pink: noiseChain('pink') } };
     return this.audio;
   }
   setSound(on) {
@@ -418,6 +433,9 @@ class Component extends DCLogic {
     level(a.bed, bedVol, 0, 0.025);
     tune(a.bedHi, 2 * C0 * lift, 2 * B0 * lift, 0.12);
     level(a.bedHi, 0.4 * bedVol * Math.min(1, env), 0, 0.025);
+    var withPair = s.gIdx === 2;
+    tune(a.bed2, 1.5 * C0 * lift, 1.5 * B0 * lift, 0.12);
+    level(a.bed2, withPair ? 0.7 * bedVol : 0, -0.3, 0.025);   // leans toward the pair's side (your left)
     // breath noise: the inhale is warm and dark (filter stays low), the exhale bright and airy, the glide silent
     var kind = this.props.breathNoise ?? 'Brown';
     var lo = kind === 'Pink' ? 160 : 90, hi = kind === 'Pink' ? 800 : 480, cut;   // low and bass-heavy
@@ -769,7 +787,18 @@ class Component extends DCLogic {
     // guide 1 keeps to your right and comes and goes on that side; guide 2 keeps to your left
     var offX = gSlot + gSide * (1 - ga.w) * 260;
     el.gSwayRef.style.display = ga.w > 0.001 ? '' : 'none';
-    el.gSwayRef.setAttribute('transform', 'translate(' + (offX + gA * Math.sin(gw)).toFixed(1) + ' ' + (-G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw)).toFixed(2) + ' ' + (305 + offX).toFixed(1) + ' 360)');
+    // guide 2 is a pair: same rhythm and stroke, staggered (one higher and further out, one lower and closer in)
+    var pair = s.gIdx === 2;
+    var aDx = pair ? -12 : 0, aDy = pair ? -70 : 0, bDx = 34, bDy = 120;
+    el.gSwayRef.setAttribute('transform', 'translate(' + (offX + aDx + gA * Math.sin(gw)).toFixed(1) + ' ' + (aDy - G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw)).toFixed(2) + ' ' + (305 + offX + aDx).toFixed(1) + ' ' + (360 + aDy).toFixed(1) + ')');
+    el.hSwayRef.style.display = pair && ga.w > 0.001 ? '' : 'none';
+    if (pair && ga.w > 0.001) {
+      // the partner shares the stroke but its tentacles keep their own wave, so the two never look cloned
+      this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave + 1.9 }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
+      var gw2 = gw + 2.2;
+      el.hSwayRef.setAttribute('transform', 'translate(' + (offX + bDx + gA * Math.sin(gw2)).toFixed(1) + ' ' + (bDy - G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw2)).toFixed(2) + ' ' + (305 + offX + bDx).toFixed(1) + ' ' + (360 + bDy).toFixed(1) + ')');
+      el.hBodyRef.setAttribute('transform', 'translate(0 ' + (4 * Math.max(0, -G.c) - 10 * Math.min(1, G.v / vTop)).toFixed(1) + ')');
+    }
     el.gBodyRef.setAttribute('transform', 'translate(0 ' + (4 * Math.max(0, -G.c) - 10 * Math.min(1, G.v / vTop)).toFixed(1) + ')');
     // guide colour = its beat (low, slow beats cool cyan; fast beats violet into pink), same root beat as the sound
     var eGa = Math.min(1, Math.max(0, (bpm - 3) / 11));
@@ -784,6 +813,13 @@ class Component extends DCLogic {
     el.gStop0Ref.style.stopColor = gCol; el.gStop1Ref.style.stopColor = gCol;
     el.gBellRef.style.stroke = gCol; el.gTentRef.style.stroke = gCol; el.gHaloRef.style.fill = gCol;
     el.gGlossRef.style.opacity = (0.62 * Math.pow(1 - eGs, 1.5)).toFixed(2);
+    if (pair) {
+      var hHue = 190 + 130 * Math.min(1, Math.max(0, (B0g * 1.5 - 2) / 10.5));
+      var hCol = 'rgb(' + hsl2rgb(hHue, 0.7, 0.74).map(Math.round).join(',') + ')';
+      el.hStop0Ref.style.stopColor = hCol; el.hStop1Ref.style.stopColor = hCol;
+      el.hBellRef.style.stroke = hCol; el.hTentRef.style.stroke = hCol; el.hHaloRef.style.fill = hCol;
+      el.hGlossRef.style.opacity = el.gGlossRef.style.opacity;
+    }
     // your colour converges on the guide's as you sync
     var bc0 = this.props.bodyColor ?? '#8FD3E8';
     var pr = [parseInt(bc0.slice(1, 3), 16), parseInt(bc0.slice(3, 5), 16), parseInt(bc0.slice(5, 7), 16)];
@@ -814,6 +850,8 @@ class Component extends DCLogic {
     var gHaloBase = 0.12 + 0.26 * (1 - eGs) * (1 - eGs);
     if (el.gHaloRef) el.gHaloRef.style.opacity = Math.min(0.9, gHaloBase * glowK * (1 + 1.4 * swellRaw)).toFixed(3);
     if (el.gInnerRef) el.gInnerRef.style.opacity = Math.min(0.5, 0.12 * glowK * (1 + 1.4 * swell)).toFixed(3);
+    if (el.hHaloRef) el.hHaloRef.style.opacity = el.gHaloRef.style.opacity;
+    if (el.hInnerRef) el.hInnerRef.style.opacity = el.gInnerRef.style.opacity;
     // color: monochrome when unsynced; each particle drifts toward its own hue as sync builds
     var HUES = [[87, 244, 213], [143, 184, 255], [197, 155, 255], [255, 159, 208], [255, 210, 122]];
     var hueMix = 0.85 * Math.pow(sync, 1.2);
@@ -990,7 +1028,7 @@ class Component extends DCLogic {
     var self = this, st = this.state || {};
     var bpm = this.guide1Bpm();
     var bodyColor = this.props.bodyColor ?? '#8FD3E8';
-    var names = ['farFieldRef', 'nearFieldRef', 'far0_0Ref', 'far0_1Ref', 'far0_2Ref', 'far0_3Ref', 'far0_4Ref', 'far1_0Ref', 'far1_1Ref', 'far1_2Ref', 'far1_3Ref', 'far1_4Ref', 'near0_0Ref', 'near0_1Ref', 'near0_2Ref', 'near0_3Ref', 'near0_4Ref', 'near1_0Ref', 'near1_1Ref', 'near1_2Ref', 'near1_3Ref', 'near1_4Ref', 'near2_0Ref', 'near2_1Ref', 'near2_2Ref', 'near2_3Ref', 'near2_4Ref', 'swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'swellRef', 'syncRef', 'glowRef', 'dimRef', 'guideCueRef', 'depthRef', 'wclipRef', 'skyRef', 'floorRef', 'weedB0Ref', 'weedB1Ref', 'weedF0Ref', 'weedF1Ref', 'weedF2Ref', 'veilRef', 'surfaceRef', 'cueStartRef', 'cueEndRef', 'pStop0Ref', 'pStop1Ref', 'gStop0Ref', 'gStop1Ref', 'gSwayRef', 'gBodyRef', 'gHaloRef', 'gTentRef', 'gBellRef', 'gInnerRef', 'gGlossRef', 'fishL0LayerRef', 'fishL0_0Ref', 'tailL0_0Ref', 'fishL0_1Ref', 'tailL0_1Ref', 'fishL0_2Ref', 'tailL0_2Ref', 'fishL1LayerRef', 'fishL1_0Ref', 'tailL1_0Ref', 'fishL1_1Ref', 'tailL1_1Ref', 'fishL1_2Ref', 'tailL1_2Ref', 'fishL2LayerRef', 'fishL2_0Ref', 'tailL2_0Ref', 'fishL2_1Ref', 'tailL2_1Ref', 'fishL3LayerRef', 'fishL3_0Ref', 'tailL3_0Ref', 'fishL4LayerRef', 'fishL4_0Ref', 'tailL4_0Ref'];
+    var names = ['farFieldRef', 'nearFieldRef', 'far0_0Ref', 'far0_1Ref', 'far0_2Ref', 'far0_3Ref', 'far0_4Ref', 'far1_0Ref', 'far1_1Ref', 'far1_2Ref', 'far1_3Ref', 'far1_4Ref', 'near0_0Ref', 'near0_1Ref', 'near0_2Ref', 'near0_3Ref', 'near0_4Ref', 'near1_0Ref', 'near1_1Ref', 'near1_2Ref', 'near1_3Ref', 'near1_4Ref', 'near2_0Ref', 'near2_1Ref', 'near2_2Ref', 'near2_3Ref', 'near2_4Ref', 'swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'swellRef', 'syncRef', 'glowRef', 'dimRef', 'guideCueRef', 'hStop0Ref', 'hStop1Ref', 'hSwayRef', 'hBodyRef', 'hHaloRef', 'hTentRef', 'hBellRef', 'hInnerRef', 'hGlossRef', 'depthRef', 'wclipRef', 'skyRef', 'floorRef', 'weedB0Ref', 'weedB1Ref', 'weedF0Ref', 'weedF1Ref', 'weedF2Ref', 'veilRef', 'surfaceRef', 'cueStartRef', 'cueEndRef', 'pStop0Ref', 'pStop1Ref', 'gStop0Ref', 'gStop1Ref', 'gSwayRef', 'gBodyRef', 'gHaloRef', 'gTentRef', 'gBellRef', 'gInnerRef', 'gGlossRef', 'fishL0LayerRef', 'fishL0_0Ref', 'tailL0_0Ref', 'fishL0_1Ref', 'tailL0_1Ref', 'fishL0_2Ref', 'tailL0_2Ref', 'fishL1LayerRef', 'fishL1_0Ref', 'tailL1_0Ref', 'fishL1_1Ref', 'tailL1_1Ref', 'fishL1_2Ref', 'tailL1_2Ref', 'fishL2LayerRef', 'fishL2_0Ref', 'tailL2_0Ref', 'fishL2_1Ref', 'tailL2_1Ref', 'fishL3LayerRef', 'fishL3_0Ref', 'tailL3_0Ref', 'fishL4LayerRef', 'fishL4_0Ref', 'tailL4_0Ref'];
     var vals = {};
     names.forEach(function (nm) { vals[nm] = self.ref(nm); });
     return Object.assign(vals, {
