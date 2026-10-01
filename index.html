@@ -232,7 +232,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 </div>
 </template>
 <script>
-const PROPS = {"breathsPerMin": 6, "routeY1": 800, "routeBuffer": 400, "routeY2": 1500, "routeY3": 1500, "routeSurface": 600, "guide2PerMin": 9, "micThreshold": 8, "breathNoise": "Brown", "bodyColor": "#8FD3E8"};
+const PROPS = {"breathsPerMin": 6, "routeY1": 5150, "routeBuffer": 400, "routeY2": 10800, "routeY3": 10800, "routeSurface": 600, "guide2PerMin": 9, "micThreshold": 8, "breathNoise": "Brown", "bodyColor": "#8FD3E8"};
 
 // ---- minimal runtime: mounts the template, wires bindings, events and refs (stands in for the design-tool runtime) ----
 class DCLogic {
@@ -698,7 +698,7 @@ class Component extends DCLogic {
   //   alone y1 | guide 1 in b | with guide 1 y2 | guide 1 out b | guide 2 in b | with guide 2 y3 | guide 2 out b | alone s | surface
   route() {
     var P = this.props, b = P.routeBuffer ?? 400;
-    var a0 = P.routeY1 ?? 800, a1 = a0 + b, a2 = a1 + (P.routeY2 ?? 1500), a3 = a2 + b, a4 = a3 + b, a5 = a4 + (P.routeY3 ?? 1500), a6 = a5 + b;
+    var a0 = P.routeY1 ?? 5150, a1 = a0 + b, a2 = a1 + (P.routeY2 ?? 10800), a3 = a2 + b, a4 = a3 + b, a5 = a4 + (P.routeY3 ?? 10800), a6 = a5 + b;
     return { b: b, a: [a0, a1, a2, a3, a4, a5, a6], surface: a6 + (P.routeSurface ?? 600) };
   }
   guideAt(m) {
@@ -873,7 +873,7 @@ class Component extends DCLogic {
     // where you are on the route decides which guide is with you and how present it is (0 = absent, 1 = beside you)
     if (this.mic) {
       this.micFrame(t, dt);
-      if (this.mic.mode === 'calibrating' && s.dist >= (this.props.routeY1 ?? 800) && this.mic.events.filter(function (x) { return x.label === 'ex'; }).length >= 3) this.micFinalize();
+      if (this.mic.mode === 'calibrating' && s.dist >= (this.props.routeY1 ?? 5150) && this.mic.events.filter(function (x) { return x.label === 'ex'; }).length >= 3) this.micFinalize();
     }
     if (el.micRowRef) {
       var micShow = !!(this.mic || this.micErr);
