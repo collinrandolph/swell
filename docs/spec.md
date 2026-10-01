@@ -139,3 +139,4 @@ The phone's microphone reads your breath, so headphones with a mic close to the 
 - [ ] Calibration: how the microphone decides an exhale has started and ended (threshold, noise floor, per-user setup).
 - [ ] User feedback: how sync with the guide is shown, beyond the jellyfish's own transformation.
 - [ ] Route units for routines: convert heights to time or breath counts (likely via expected distance per breath at each guide rhythm). Breath counts are never shown to the user, so a routine's breath count is an approximate target; someone breathing slower than the guide taking more breaths is fine.
+- [ ] Sync tuning (testing phase): a consistent 1.2 s offset currently counts as fully in sync, which may be too generous. Decide how large a steady offset is allowed, and the dead-zone and lock widths.
