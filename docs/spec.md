@@ -52,7 +52,7 @@ A jellyfish's shape shows its pulse speed, and its color shows its beat value; b
 - **Tentacles never overlap:** they keep their left-to-right order with a small gap at every point along their length.
 - **Smooth by default:** tentacles are smooth curves at the default rhythm; jaggedness only appears at high energy.
 - **Speed lines:** drifting particles stretch along the y-axis with swimming speed, peaking at top speed and settling fully back to dots. Subtle at low energy, stronger as intensity increases.
-- **Fish layers:** sporadic fish in three background and two foreground depth layers. Fish swim horizontally only, enter at the top of the screen, and are fully opaque. Depth sets size, speed and drift with the ascent (parametric perspective) and darkness (atmospheric perspective: far fish fade into the water, near fish are dark silhouettes). Background and foreground can be toggled separately.
+- **Fish layers:** sporadic fish in three background and two foreground depth layers. Fish swim horizontally only, enter at the top of the screen, and are fully opaque. Depth sets size, speed and drift with the ascent (parametric perspective) and darkness (atmospheric perspective: far fish fade into the water, near fish are dark silhouettes). Background and foreground can be toggled separately. No fish within the final s of the surface: none spawn in that stretch, and any fish nearing it fades out before the waterline.
 
 ## Audio
 

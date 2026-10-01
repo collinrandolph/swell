@@ -825,12 +825,17 @@ class Component extends DCLogic {
     // foreground fish are large dark silhouettes, slightly out of focus, that sweep by in front.
     var stf = this.state || {};
     var rnd = Math.random;
+    // fish keep out of the last stretch below the surface (the route's final s): none spawn once you are in it,
+    // and any fish that strays within s of the waterline fades away before it can reach it
+    var sGap = this.props.routeSurface ?? 600;
+    var fishCeil = 325 - (S - s.dist) + sGap;          // screen y of the shallowest water a fish may occupy
+    var noFishZone = s.dist >= S - sGap || s.phase === 'breach' || s.phase === 'float';
     function runFish(layer, on, slots, tails, cfg) {
       if (!layer) return;
       layer.style.display = on ? '' : 'none';
       if (!s.fish[cfg.key]) s.fish[cfg.key] = { next: t + cfg.firstWait(), list: [] };
       var F = s.fish[cfg.key];
-      if (on && t >= F.next) {
+      if (on && !noFishZone && t >= F.next) {
         var school = rnd() < cfg.school ? 2 + Math.floor(rnd() * 2) : 1;
         var dir = rnd() < 0.5 ? 1 : -1, y0 = cfg.yMin + rnd() * (cfg.yMax - cfg.yMin);
         var size = cfg.sMin + rnd() * (cfg.sMax - cfg.sMin), sp = cfg.vMin + rnd() * (cfg.vMax - cfg.vMin);
@@ -853,8 +858,12 @@ class Component extends DCLogic {
         var g = slots[f.slot];
         var m = 24 * f.size + 60;
         var alive = f.x > -m - 200 && f.x < 390 + m + 200 && f.y < 844 + 10 * f.size;
+        var top = f.y - 7 * f.size;                     // top of the fish's body
+        var keep = Math.max(0, Math.min(1, (top - fishCeil) / 40));
+        if (keep <= 0 && fishCeil > -200) alive = false;
         if (g && alive && on) {
           g.style.display = '';
+          g.style.opacity = keep < 1 ? keep.toFixed(2) : '';
           g.setAttribute('transform', 'translate(' + f.x.toFixed(1) + ' ' + (f.y + 1.5 * f.size * Math.sin(f.bob)).toFixed(1) + ') scale(' + (f.dir * f.size).toFixed(2) + ' ' + f.size.toFixed(2) + ')');
           if (tails[f.slot]) tails[f.slot].setAttribute('transform', 'rotate(' + (16 * Math.sin(f.ph)).toFixed(1) + ' -9 0)');
           // hue: blended into the layer's depth color (haze far away, deep shade up close)
