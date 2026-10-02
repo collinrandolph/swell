@@ -778,60 +778,50 @@ class Component extends DCLogic {
     R.gloss.setAttribute('cy', (cy - b.ry * 0.62).toFixed(1));
     R.gloss.style.opacity = (0.62 * Math.pow(calm, 1.5)).toFixed(2);
 
-    // tentacles: each point replays its root's state from a moment ago (follow-through),
-    // smoothed, kept from crossing, drawn as soft curves
-    var JN = 24, count = 8, TIP_LAG = 0.7, base = 165 + calm * 14, ampBase = 5 + calm * 3 + e * 4;
+    // tentacles: successive breaking of joints. A plain forward-kinematic chain carries everything below a joint
+    // with it the instant that joint moves, so the tip sweeps before the bend reaches it (reads as a C lever).
+    // Here a point a fraction f down the strand reads EVERYTHING (root position, rim spread, rim angle, speed) from
+    // the moment WAVE_T*f seconds ago, so nothing below a point moves until the motion has travelled down to it.
+    // The rim angle travels as a sideways offset (follow the leader): the push tucks the top in while the flare's
+    // outward offset is still on its way down, giving the S, whose arches lengthen as they travel. Near the root the
+    // offset ramps in so the strand leaves the bell tangent to the rim margin; a small static curl (the glide angle)
+    // is chained on at the root. Amplitude grows a little toward the tip and eases as the wave ages.
+    var JN = 24, count = 8, base = 165 + calm * 14, ampBase = 5 + calm * 3 + e * 4;
     var jag = Math.max(0, (e - 0.5) / 0.5), minGap = (2.2 + calm * 3.6) + 2.5;
-    var rows = [];
-    for (var j = 0; j <= JN; j++) {
-      var hj = at(t - TIP_LAG * (j / JN));
-      rows.push({ h: hj, sh: shape(hj.c, hj.c), sp: Math.min(1, hj.v / vTop) });
-    }
     var xs = [], ys = [], hooks = [], hooksY = [], chAng = 0, chX = 0, chY = 0;
     for (var n = 0; n < count; n++) {
       var rf = -1 + 2 * n / (count - 1);
       // Centre strands vs rim strands (same root spread, so the overall width is unchanged). wc = 1 for the
       // middle pair, ~0.75 for the next pair out, ~0 at the rim. Centre strands are ribbon-like: a little longer,
-      // trailing further behind the bell, with slow, broad, low kinks and almost no C-curve. Rim strands keep the
-      // quick undulation and the loaded hook.
+      // with a slower wave, slow, broad, low kinks and almost no rim drive. Rim strands carry the full wave.
       var wo = Math.max(0, Math.min(1, (Math.abs(rf) - 0.15) / 0.6)); wo = wo * wo * (3 - 2 * wo);
-      var wc = 1 - wo, lagN = TIP_LAG + 0.4 * wc;
-      var len = (base + (n % 2) * 14) * (1 + 0.1 * wc);
+      var wc = 1 - wo, tauN = WAVE_T * (1 + 0.25 * wc);
+      var len = (base + (n % 2) * 14) * (1 + 0.1 * wc), drive = rf * (0.2 + 0.8 * wo), K = len / 6.5;
       xs.push([]); ys.push([]); hooks.push([]); hooksY.push([]);
       for (var j2 = 0; j2 <= JN; j2++) {
-        var f = j2 / JN, Rw = rows[j2];
-        if (wc > 0.01 && j2 > 0) { var hc = at(t - lagN * f); Rw = { h: hc, sh: shape(hc.c, hc.c), sp: Math.min(1, hc.v / vTop) }; }
-        var rootX = cx + rf * Rw.sh.half * 0.9, rootY = Rw.sh.rimY + 4 + calm * 6;
-        var a = ampBase * (0.25 + f) * (1 - 0.4 * Rw.sp);
+        var f = j2 / JN, tau = tauN * f;
+        var hd = at(t - tau), sh = shape(hd.c, hd.c), sp = Math.min(1, hd.v / vTop);
+        var rootX = cx + rf * sh.half * 0.9, rootY = sh.rimY + 4 + calm * 6;
+        var a = ampBase * (0.25 + f) * (1 - 0.4 * sp);
         var ph = f * 5 - J.wave + n * 0.45;
         var q = f * 5.5 + n * 0.25 - J.wave * 0.3;
         var zz = 1 - 4 * Math.abs(q - Math.round(q));
         var undO = a * (Math.sin(ph) * (1 - jag) + zz * 0.8 * jag);
-        var undC = ampBase * 0.5 * (0.1 + f) * (1 - 0.3 * Rw.sp) * Math.sin(f * 2.1 - J.wave * 0.4 + n * 1.3);
+        var undC = ampBase * 0.5 * (0.1 + f) * (1 - 0.3 * sp) * Math.sin(f * 2.1 - J.wave * 0.4 + n * 1.3);
         var und = undO * wo + undC * wc;
-        var drag = rf * vig * (3 - 18 * Rw.sp) * f;          // strands stream together at speed
-        // Roots driven by the rim; the motion travels down the chain as a wave. The root segment is tangent to the
-        // rim margin (out on the flare, tucked in on the push). The strand is the root's recent history laid out along
-        // its length: a segment a fraction f down takes the root's angle from WAVE_T*f seconds ago, so a crest leaves
-        // the root and rolls to the tip at a steady speed. Because the push reverses the root angle while the flare is
-        // still travelling down, the strand shows an S (in at the top, out below), and its arches lengthen as they
-        // move down. Only the change from the glide angle travels; the glide angle itself fades out just under the
-        // rim, so a gliding strand curls off the bell and then hangs straight. Amplitude grows a little toward the tip
-        // (the flick) and eases off as the wave ages (water damping). Strongest on the outer tentacles.
+        var drag = rf * vig * (3 - 18 * sp) * f;          // strands stream together at speed
+        // the travelling offset
+        var G = Math.sin(Math.PI / 2 * Math.min(1, f / 0.3)) * (1 + 0.4 * f * f);
+        var wx = drive * K * (phiOf(hd.c) - phiRest) * G * Math.exp(-tau / 2.6);
+        // the static glide curl at the root
         if (j2 === 0) { chAng = 0; chX = 0; chY = 0; }
         else {
-          var fm = (j2 - 0.5) / JN, tau = WAVE_T * fm;
-          var hd = at(t - tau);
-          var dev = phiOf(hd.c) - phiRest;
-          var rootFade = Math.max(0, 1 - fm / 0.18);
-          var waveA = Math.exp(-tau / 2.6) * (1 + 0.6 * fm * fm);
-          chAng = rf * (0.2 + 0.8 * wo) * (phiRest * rootFade + dev * waveA);
-          var segL = len / JN;
-          chX += segL * Math.sin(chAng); chY += segL * (Math.cos(chAng) - 1);
+          chAng = drive * phiRest * Math.max(0, 1 - ((j2 - 0.5) / JN) / 0.18);
+          chX += (len / JN) * Math.sin(chAng); chY += (len / JN) * (Math.cos(chAng) - 1);
         }
-        var lenK = 1 + 0.06 * Rw.sp - 0.06 * Math.max(0, -Rw.h.c);
+        var lenK = 1 + 0.06 * sp - 0.06 * Math.max(0, -hd.c);
         xs[n].push(rootX + drag + und);
-        hooks[n].push(chX); hooksY[n].push(chY);
+        hooks[n].push(chX + wx); hooksY[n].push(chY);
         ys[n].push(rootY + f * len * lenK);
       }
     }
@@ -840,6 +830,10 @@ class Component extends DCLogic {
     for (var n2 = 0; n2 < count; n2++) for (var pz = 0, pzN = passes + (Math.abs(n2 - (count - 1) / 2) < 1.6 ? 2 : 0); pz < pzN; pz++) {
       var src = xs[n2].slice();
       for (var j3 = 1; j3 < JN; j3++) xs[n2][j3] = 0.25 * src[j3 - 1] + 0.5 * src[j3] + 0.25 * src[j3 + 1];
+    }
+    for (var ns = 0; ns < count; ns++) for (var ps = 0; ps < 2; ps++) {         // soften the travelling kinks a touch
+      var hs = hooks[ns].slice();
+      for (var js = 2; js < JN; js++) hooks[ns][js] = 0.25 * hs[js - 1] + 0.5 * hs[js] + 0.25 * hs[js + 1];
     }
     for (var nh = 0; nh < count; nh++) for (var jh = 0; jh <= JN; jh++) { xs[nh][jh] += hooks[nh][jh]; ys[nh][jh] += hooksY[nh][jh]; }   // the C-curve stays crisp
     var KEEP_APART = false;                           // overlap rule off while the motion is being modelled
