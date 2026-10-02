@@ -333,7 +333,7 @@ class Component extends DCLogic {
         return w;
       })(),
       gj: { c: 0, hist: [], wave: 0, v: 0, dist: 0, rel: 0, curLeft: 0, inPow: false },
-      fish: {}, sync: 0, syncShown: 0, pushes: 0, kicks: 0, queue: [], curJ: 0, curLeft: 0, psi: 0, amp: 0.85, active: false, rate: null, steady: 0, steadyShown: 0,
+      fish: {}, sync: 0, syncShown: 0, pushes: 0, kicks: 0, queue: [], curLeft: 0, ph: 0, resting: true, inPow: false, rate: null, steady: 0, steadyShown: 0,
       presses: [], exhales: [], hist: [],
       Hn: 2400, Hf: 1200,
       nearPts: scatter(2400, 22, 3), farPts: scatter(1200, 15, 2)
@@ -800,6 +800,57 @@ class Component extends DCLogic {
 
   // ---------- draw one jellyfish (yours or the guide) ----------
   // J: { c: bell contraction now, hist: recent { t, c, v }, wave: undulation phase }; R: its SVG elements
+  // ---------- the shared jellyfish model: the guide and your jellyfish run exactly this ----------
+  // Breath clock J.ph (fraction of one breath):
+  //   0-0.33 inhale: winds up the other way into a wide, flat flare, sinking slightly (anticipation)
+  //   0.33-0.4 hold at full flare (matches the sound's dip at the top of the breath)
+  //   0.4-0.5 push: snaps shut and lunges up; 0.5-0.65 eases into the glide
+  //   0.65-1 glide: tall, narrow, streamlined (c ~ +0.8)
+  bellPulse(ph) {
+    var Tp = [0, 0.08, 0.33, 0.4, 0.5, 0.65, 1], Cp = [0.8, 0.45, -1.3, -1.36, 1.15, 1.0, 0.8];
+    for (var ii = 0; ii < Tp.length - 1; ii++) if (ph <= Tp[ii + 1]) {
+      var uu = (ph - Tp[ii]) / (Tp[ii + 1] - Tp[ii]);
+      return Cp[ii] + (Cp[ii + 1] - Cp[ii]) * (1 - Math.cos(Math.PI * uu)) / 2;
+    }
+    return Cp[Cp.length - 1];
+  }
+  strokeImpulse(e) { return 220 * (0.6 + 2.4 * e); }          // velocity one push adds, px/s
+  // anticipation in the body too: it sinks as it fills, then lunges up on the push
+  bodyDip(J, vTop) {
+    var ph = J.ph || 0;
+    return 14 * Math.max(0, -J.c) / 1.36 - 12 * Math.min(1, J.v / vTop) - (ph >= 0.4 && ph < 0.55 ? 8 * Math.sin(Math.PI * (ph - 0.4) / 0.15) : 0);
+  }
+  // one frame of the model, after the clock J.ph has moved (rate = clock speed, phase per second).
+  // The push releases its impulse across the power stroke (0.4-0.62); water drag bleeds speed off.
+  bellStep(J, dt, rate, impulse, e, t) {
+    var inPow = J.ph >= 0.4 && J.ph < 0.62, dJ = 0;
+    if (inPow && !J.inPow) J.curLeft = typeof impulse === 'function' ? impulse() : impulse;
+    J.inPow = inPow;
+    if (inPow && J.curLeft > 0) {
+      var left = Math.max(0.03, (0.62 - J.ph) / rate);
+      dJ = J.curLeft * Math.min(1, dt / left);
+      J.v += dJ; J.curLeft -= dJ;
+    }
+    J.v -= (J.v / 7 + J.v * J.v / 900) * dt; if (J.v < 0) J.v = 0;
+    J.dist += J.v * dt;
+    J.c = (0.85 + 0.15 * Math.min(1, J.v / 750)) * this.bellPulse(J.ph);
+    J.wave += dt * 2 * Math.PI / (2.6 - 1.2 * e);
+    if (t != null) {
+      this.smoothC(J, dt);
+      J.hist.push({ t: t, c: J.c, cs: J.cs2, v: J.v });
+      while (J.hist.length > 2 && J.hist[1].t < t - 21) J.hist.shift();
+    }
+    return dJ;
+  }
+
+  // two-stage low-pass of the bell state (time constant a tenth of the breath): the tentacle wave carries this,
+  // so the quick push spreads into one broad arch along the strand
+  smoothC(J, dt) {
+    var ts = Math.max(0.3, (J.per || 10) / 10), k = 1 - Math.exp(-dt / ts);
+    if (J.cs1 == null) { J.cs1 = J.c; J.cs2 = J.c; }
+    J.cs1 += (J.c - J.cs1) * k; J.cs2 += (J.cs1 - J.cs2) * k;
+  }
+
   drawJelly(J, R, t, e, vTop) {
     var calm = 1 - e;
     var cx = 120, cy = 150;
@@ -807,9 +858,12 @@ class Component extends DCLogic {
     var spikes = 9, spikeLen = Math.max(0, e - 0.35) / 0.65 * 0.34;
     var depth = 2 + 14 * e, belly = calm * 16, vig = 0.75 + 0.5 * e;
     var hist = J.hist;
-    function at(tq) {
-      for (var i = hist.length - 1; i >= 0; i--) if (hist[i].t <= tq) return hist[i];
-      return hist[0];
+    function at(tq) {                                   // latest sample at or before tq (binary search)
+      if (!hist.length) return { t: t, c: J.c, cs: J.c, v: 0 };
+      if (hist[0].t > tq) return hist[0];
+      var lo = 0, hi = hist.length - 1;
+      while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (hist[mid].t <= tq) lo = mid; else hi = mid - 1; }
+      return hist[lo];
     }
     function lerp(a, b, k) { return a + (b - a) * k; }
     function shape(c, cRim) {
@@ -822,7 +876,9 @@ class Component extends DCLogic {
       var sh = shape(c, c), ph = Math.atan2(3 * sh.fl, sh.ry + 1.2 * sh.fl);
       return ph >= 0 ? ph : 0.6 * ph;
     }
-    var WAVE_T = 1.8, phiRest = phiOf(0.8);
+    // One S per strand: the strand shows one whole breath of the root's (smoothed) history, so the wave
+    // takes one breath period to travel root to tip and every moment of the breath reads as a single S.
+    var WAVE_T = Math.max(3, Math.min(20, J.per || 10)), phiRest = phiOf(0.8);
 
     // bell (its rim trails the dome slightly: overlap)
     var b = shape(J.c, at(t - 0.08).c);
@@ -864,12 +920,15 @@ class Component extends DCLogic {
       // middle pair, ~0.75 for the next pair out, ~0 at the rim. Centre strands are ribbon-like: a little longer,
       // with a slower wave, slow, broad, low kinks and almost no rim drive. Rim strands carry the full wave.
       var wo = Math.max(0, Math.min(1, (Math.abs(rf) - 0.15) / 0.6)); wo = wo * wo * (3 - 2 * wo);
-      var wc = 1 - wo, tauN = WAVE_T * (1 + 0.25 * wc);
-      var len = (base + (n % 2) * 14) * (1 + 0.1 * wc), drive = rf * (0.2 + 0.8 * wo), K = len / 6.5;
+      var wc = 1 - wo, tauN = WAVE_T;
+      var len = (base + (n % 2) * 14) * (1 + 0.1 * wc), drive = rf * (0.2 + 0.8 * wo), K = len / 3.2;
       xs.push([]); ys.push([]); hooks.push([]); hooksY.push([]);
       for (var j2 = 0; j2 <= JN; j2++) {
         var f = j2 / JN, tau = tauN * f;
-        var hd = at(t - tau), sh = shape(hd.c, hd.c), sp = Math.min(1, hd.v / vTop);
+        var hd = at(t - tau), hv = at(t - 0.7 * f), sp = Math.min(1, hv.v / vTop);
+        // just under the rim the strand follows the bell exactly; further down it carries the smoothed breath,
+        // so the wave is one broad S rather than a tight kink from the quick push
+        var cm = lerp(hd.c, hd.cs == null ? hd.c : hd.cs, Math.min(1, f / 0.2)), sh = shape(cm, cm);
         var rootX = cx + rf * sh.half * 0.9, rootY = sh.rimY + 4 + calm * 6;
         var a = ampBase * (0.25 + f) * (1 - 0.4 * sp);
         var ph = f * 5 - J.wave + n * 0.45;
@@ -881,14 +940,14 @@ class Component extends DCLogic {
         var drag = rf * vig * (3 - 18 * sp) * f;          // strands stream together at speed
         // the travelling offset
         var G = Math.sin(Math.PI / 2 * Math.min(1, f / 0.3)) * (1 + 0.4 * f * f);
-        var wx = drive * K * (phiOf(hd.c) - phiRest) * G * Math.exp(-tau / 2.6);
+        var wx = drive * K * (phiOf(cm) - phiRest) * G * Math.exp(-0.5 * f);
         // the static glide curl at the root
         if (j2 === 0) { chAng = 0; chX = 0; chY = 0; }
         else {
           chAng = drive * phiRest * Math.max(0, 1 - ((j2 - 0.5) / JN) / 0.18);
           chX += (len / JN) * Math.sin(chAng); chY += (len / JN) * (Math.cos(chAng) - 1);
         }
-        var lenK = 1 + 0.06 * sp - 0.06 * Math.max(0, -hd.c);
+        var lenK = 1 + 0.06 * sp - 0.06 * Math.max(0, -hv.c);
         xs[n].push(rootX + drag + und);
         hooks[n].push(chX + wx); hooksY[n].push(chY);
         ys[n].push(rootY + f * len * lenK);
@@ -985,65 +1044,52 @@ class Component extends DCLogic {
     s.e = e;
     var calm = 1 - e;
     // impulse-momentum: every breath delivers a kick; quicker rhythms give sharper, stronger strokes
-    var impulse = 220 * (0.6 + 2.4 * e);                  // velocity added per stroke, px/s
+    var impulse = this.strokeImpulse(e);
     var vTop = 700;                                 // speed at which the effects (streaks, streaming) read as full
-    // Bell engine: exactly one push per breath. A breath starts (or queues) one pulse cycle; with no breath the bell rests.
-    // Power shows in the stroke itself: at higher speed each pulse runs faster and contracts deeper.
-    // Phase: 0-0.4 opening, 0.4-0.62 power stroke, 0.62-1 glide, then rest at 0.
-    var spdN = Math.min(1, s.v / 750);
-    var cycleDur = 2.6 - 2.0 * Math.pow(spdN, 0.7);       // seconds for one full pulse
-    var depth = 0.85 + 0.3 * spdN;                        // how deep the contraction goes
+    // YOUR breath clock: the same phases as the guide's, timed by YOUR breathing and YOUR rhythm (s.per).
+    // Exactly one push per breath: only an exhale carries the clock into the push.
+    var P = s.per = s.rate ? 60 / s.rate : 60 / this.guide1Bpm();
     if (s.kicks > 0) {
       for (var kq = 0; kq < s.kicks; kq++) if (s.queue.length < 3) s.queue.push(impulse);
-      s.kicks = 0;
-      s.active = true;
+      s.kicks = 0; s.resting = false;
     }
-    var owed = s.queue.length > 0;
-    var inPowerPrev = s.psi >= 0.4 && s.psi < 0.62;
-    var rate = 1 / cycleDur;
-    if (owed && !inPowerPrev) {
-      // a push is owed: hurry forward into the next power stroke (never backwards, never a restart)
-      var toStroke = s.psi < 0.4 ? 0.4 - s.psi : 1.4 - s.psi;
-      rate = Math.max(rate, toStroke / 0.22);
+    if (s.inhaling) s.resting = false;
+    var owed = s.queue.length > 0, ph = s.ph || 0, inPowNow = ph >= 0.4 && ph < 0.62;
+    var hearIn = s.inhaleAt != null && t - s.inhaleAt < 3 * P;          // the mic is hearing your inhales
+    var inDur = this.mic && this.mic.prof && this.mic.prof.in ? this.mic.prof.in.dur : 0.33 * P;
+    var rate = 1 / P;
+    if (owed && !inPowNow) {
+      // an exhale: hurry forward into the push (never backwards, never a restart)
+      rate = Math.max(rate, (ph < 0.4 ? 0.4 - ph : 1.4 - ph) / 0.22);
+      s.holdAt = null;
+    } else if (s.resting) rate = 0;
+    else if (ph < 0.33) {
+      if (s.inhaling) rate = 0.33 / Math.max(0.6, inDur);               // open in step with the inhale
+      else if (hearIn) rate = Math.max(rate, (0.33 - ph) / 0.3);        // the inhale ended early: finish opening
+    } else if (ph < 0.4) {
+      // top of the breath: hold open for the exhale; with no exhale, settle back to rest
+      if (s.holdAt == null) s.holdAt = t;
+      var waited = hearIn && s.inhaleEndAt && !s.inhaling ? t - Math.max(s.inhaleEndAt, s.holdAt) : t - s.holdAt;
+      rate = ph < 0.39 ? rate : 0;
+      if (!s.inhaling && waited > (hearIn ? 1.2 : 0.35 * P)) s.relaxing = true;
     }
-    var prevPsi = s.psi;
-    var inDur = this.mic && this.mic.prof && this.mic.prof.in ? this.mic.prof.in.dur : 1.5;
-    if (s.inhaling) s.active = true;
-    var relaxing = !s.inhaling && !owed && s.psi > 0 && s.psi < 0.4 && s.inhaleEndAt && t - s.inhaleEndAt > 1.2;
-    if (s.inhaling && !owed && s.psi < 0.4) rate = 0.38 / Math.max(0.6, inDur);    // open in step with the inhale
-    var waitEx = !s.inhaling && !owed && s.psi > 0 && s.psi < 0.4 && s.inhaleEndAt && t - s.inhaleEndAt <= 1.2;
-    if (relaxing) { s.psi = Math.max(0, s.psi - 0.4 * dt); if (s.psi === 0) s.active = false; }   // an inhale with no exhale: settle back
-    else if (waitEx) { /* top of the breath: stay open for the exhale */ }
-    else if (s.active) s.psi = s.psi + rate * dt;
-    if (s.inhaling && !owed && s.psi < 0.4) s.psi = Math.min(s.psi, 0.38);         // hold open until the exhale
-    if (s.psi >= 1) {
-      s.psi -= 1;
-      if (!owed) { s.active = false; s.psi = 0; }         // nothing owed: finish the glide and rest
-    }
-    var inPower = s.psi >= 0.4 && s.psi < 0.62;
-    if (inPower && !inPowerPrev) { s.curJ = s.queue.shift() || 0; s.curLeft = s.curJ; }
-    s.amp += (depth - s.amp) * (1 - Math.exp(-dt / 0.4));
-    function pulse(ph) {
-      var Tp = [0, 0.4, 0.62, 0.82, 1], Cp = [0, -1, 1, 0.2, 0];
-      for (var ii = 0; ii < 4; ii++) if (ph <= Tp[ii + 1]) {
-        var uu = (ph - Tp[ii]) / (Tp[ii + 1] - Tp[ii]);
-        return Cp[ii] + (Cp[ii + 1] - Cp[ii]) * (1 - Math.cos(Math.PI * uu)) / 2;
+    if (s.relaxing && !owed) {
+      s.ph = Math.max(0, ph - 0.4 * dt);
+      if (s.ph === 0) { s.relaxing = false; s.resting = true; s.holdAt = null; }
+    } else {
+      s.relaxing = false;
+      s.ph = ph + rate * dt;
+      if (s.inhaling && !owed && s.ph < 0.4) s.ph = Math.min(s.ph, 0.38);
+      if (!owed && ph < 0.4 && s.ph >= 0.39) s.ph = 0.39;              // only an exhale starts the push
+      if (s.ph >= 1) {
+        s.ph -= 1; s.holdAt = null;
+        // the glide ends: with the mic hearing inhales, rest until the next one; with only exhales, run on into
+        // the next inhale so the bell is open when your next exhale is due
+        if (!owed && !s.inhaling && (hearIn || !s.rate)) { s.ph = 0; s.resting = true; }
       }
-      return 0;
     }
-    s.c = s.amp * pulse(s.psi);
-
-    // thrust: this breath's impulse is released across its own power stroke, so the push you see is the push you get.
-    // Water drag (linear + quadratic) bleeds speed off; breaths that land before it does stack up.
-    if (inPower && s.curLeft > 0) {
-      var left = Math.max(0.03, (0.62 - s.psi) / rate);
-      var dJ = s.curLeft * Math.min(1, dt / left);
-      s.v += dJ; s.curLeft -= dJ;
-      if (s.phase === 'float') s.fv -= dJ * 0.25;      // a push at the surface lifts it a little
-    }
-    s.v -= (s.v / 7 + s.v * s.v / 900) * dt;          // the quadratic term sets the top speed, reached around 10 / min
-    if (s.v < 0) s.v = 0;
-    s.dist += s.v * dt;
+    var dJ = this.bellStep(s, dt, rate || 1 / P, function () { return s.queue.shift() || 0; }, e, t);
+    if (s.phase === 'float') s.fv -= dJ * 0.25;      // a push at the surface lifts it a little
     var S = this.route().surface;                   // the surface: the end of the route
     if (s.phase === 'swim' && s.dist >= S) { s.phase = 'breach'; s.yOff = 0; s.vy = s.v; }
     if (s.phase === 'breach' || s.phase === 'float') s.dist = S;   // the camera stops at the surface
@@ -1059,9 +1105,6 @@ class Component extends DCLogic {
       s.yOff += s.fv * dt;
     }
     s.rustle *= Math.exp(-dt / 1.4);
-    s.wave += dt * 2 * Math.PI / (2.6 - 1.2 * e);
-    s.hist.push({ t: t, c: s.c, v: s.v });
-    while (s.hist.length > 2 && s.hist[1].t < t - 2.6) s.hist.shift();
 
     this.drawJelly(s, { bell: el.bellRef, inner: el.innerRef, gloss: el.glossRef, tent: el.tentRef }, t, e, vTop);
 
@@ -1074,41 +1117,15 @@ class Component extends DCLogic {
     if (!G.warm && s.gIdx) {
       var wSteps = Math.round(4 * gcyc * 30), wdt = 4 * gcyc / wSteps;
       for (var wk2 = 0; wk2 <= wSteps; wk2++) {
-        var pk = ((s.guide - 4 * (1 - wk2 / wSteps)) % 1 + 1) % 1, pIn = pk >= 0.4 && pk < 0.62;
-        if (pIn && !G.inPow) G.curLeft = 220 * (0.6 + 2.4 * eGs);
-        G.inPow = pIn;
-        if (pIn && G.curLeft > 0) { var wl = Math.max(0.03, (0.62 - pk) * gcyc), wj = G.curLeft * Math.min(1, wdt / wl); G.v += wj; G.curLeft -= wj; }
-        G.v -= (G.v / 7 + G.v * G.v / 900) * wdt; if (G.v < 0) G.v = 0;
-        G.dist += G.v * wdt;
-        G.wave += wdt * 2 * Math.PI / (2.6 - 1.2 * eGs);
+        G.ph = ((s.guide - 4 * (1 - wk2 / wSteps)) % 1 + 1) % 1; G.per = gcyc;
+        this.bellStep(G, wdt, 1 / gcyc, this.strokeImpulse(eGs), eGs, null);
       }
       G.warm = true;
     }
-    var gInPow = s.guide >= 0.4 && s.guide < 0.62;
-    if (gInPow && !G.inPow && s.phase === 'swim') G.curLeft = 220 * (0.6 + 2.4 * eGs);
-    G.inPow = gInPow;
-    if (gInPow && G.curLeft > 0) { var gl = Math.max(0.03, (0.62 - s.guide) * gcyc); var gdJ = G.curLeft * Math.min(1, dt / gl); G.v += gdJ; G.curLeft -= gdJ; }
-    G.v -= (G.v / 7 + G.v * G.v / 900) * dt; if (G.v < 0) G.v = 0;
-    G.dist += G.v * dt;
-    // Guide breathing, exaggerated with anticipation so it can be followed by eye:
-    //   glide  (0.65-1):  tall, narrow, streamlined (c ~ +0.8)
-    //   inhale (0-0.33):  winds up the other way into a wide, flat flare, sinking slightly (the wind-up)
-    //   hold   (0.33-0.4): stays at full flare a beat, matching the sound's dip at the top of the breath
-    //   exhale (0.4-0.5): snaps shut into the push, then eases into the glide
-    function guidePulse(ph) {
-      var Tp = [0, 0.08, 0.33, 0.4, 0.5, 0.65, 1], Cp = [0.8, 0.45, -1.3, -1.36, 1.15, 1.0, 0.8];
-      for (var ii = 0; ii < Tp.length - 1; ii++) if (ph <= Tp[ii + 1]) {
-        var uu = (ph - Tp[ii]) / (Tp[ii + 1] - Tp[ii]);
-        return Cp[ii] + (Cp[ii + 1] - Cp[ii]) * (1 - Math.cos(Math.PI * uu)) / 2;
-      }
-      return Cp[Cp.length - 1];
-    }
-    G.c = (0.85 + 0.15 * Math.min(1, G.v / 750)) * guidePulse(s.guide);
-    // anticipation in the body too: it sinks as it fills, then lunges up on the push
-    var gDip = 14 * Math.max(0, -G.c) / 1.36 - 12 * Math.min(1, G.v / vTop) - (s.guide >= 0.4 && s.guide < 0.55 ? 8 * Math.sin(Math.PI * (s.guide - 0.4) / 0.15) : 0);
-    G.wave += dt * 2 * Math.PI / (2.6 - 1.2 * eGs);
-    G.hist.push({ t: t, c: G.c, v: G.v });
-    while (G.hist.length > 2 && G.hist[1].t < t - 2.6) G.hist.shift();
+    // the guide runs the same model on the guide clock
+    G.ph = s.guide; G.per = gcyc;
+    this.bellStep(G, dt, 1 / gcyc, s.phase === 'swim' ? this.strokeImpulse(eGs) : 0, eGs, t);
+    var gDip = this.bodyDip(G, vTop);
     // relative position: if it out-swims you it pulls ahead (up the screen); if you out-swim it, it drops back
     G.rel += (G.v - camV) * dt * 0.6;
     G.rel -= G.rel * dt / 5;
@@ -1127,7 +1144,7 @@ class Component extends DCLogic {
     el.hSwayRef.style.display = pair && ga.w > 0.001 ? '' : 'none';
     if (pair && ga.w > 0.001) {
       // the partner moves in exact sync: same stroke, same tentacle wave, same sway (only colour and tone differ)
-      this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
+      this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave, per: G.per }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
       var gw2 = gw;                                   // moves in exact lockstep with its partner
       el.hSwayRef.setAttribute('transform', 'translate(' + (offX + bDx + gA * Math.sin(gw2)).toFixed(1) + ' ' + (bDy - G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw2)).toFixed(2) + ' ' + (305 + offX + bDx).toFixed(1) + ' ' + (360 + bDy).toFixed(1) + ')');
       el.hBodyRef.setAttribute('transform', 'translate(0 ' + gDip.toFixed(1) + ')');
@@ -1200,7 +1217,7 @@ class Component extends DCLogic {
       }
     });
     if (el.guideCueRef) el.guideCueRef.style.opacity = ((1 - 0.75 * Math.max(0, (sync - 0.3) / 0.7)) * gw0).toFixed(2);
-    el.bodyRef.setAttribute('transform', 'translate(0 ' + (4 * Math.max(0, -s.c) - 10 * spd).toFixed(1) + ')');
+    el.bodyRef.setAttribute('transform', 'translate(0 ' + this.bodyDip(s, vTop).toFixed(1) + ')');
 
     // speed lines: stretch tracks speed, collapsing to dots well before the water stops
     var mNear = 1.6 + 30 * Math.pow(e, 1.5), mFar = 1 + (mNear - 1) * 0.5;
