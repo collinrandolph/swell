@@ -3,7 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Swell prototype</title>
+<title>Swell</title>
+<meta name="description" content="Breathe with the jellyfish you meet and rise from the ocean floor to the surface.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Swell">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2306101B'/%3E%3Cpath d='M14 34a18 16 0 0 1 36 0z' fill='%238FD3E8'/%3E%3Cpath d='M20 36q-3 10 1 20M28 36q-2 10 0 22M36 36q2 10 0 22M44 36q3 10-1 20' stroke='%238FD3E8' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+[data-dev]{display:none!important}
+html,body{background:#06101B!important;height:100dvh!important}
+@media (max-width:600px){#phone{border-radius:0!important;box-shadow:none!important}}
+</style>
 <meta name="theme-color" content="#06101B">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
@@ -171,23 +182,23 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <path ref="{{surfaceRef}}" d="M 0 0" style="fill: none; stroke: #E8F7FF; stroke-width: 1.6; stroke-linecap: round; opacity: 0.8"></path>
 </svg>
 <div style="position: absolute; left: 24px; right: 24px; top: 30px; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 14px; background: rgba(6,16,27,0.55); border: 1px solid rgba(232,241,242,0.12)">
-<div style="display: flex; justify-content: space-between; align-items: baseline">
+<div data-dev style="display: flex; justify-content: space-between; align-items: baseline">
 <label for="sw-guide" style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1">Guide 1 rhythm</label>
 <div style="font-size: 12px; color: #E8F1F2">{{guideLabel}}</div>
 </div>
-<input id="sw-guide" type="range" min="3" max="14" step="0.5" value="{{bpm}}" onChange="{{onGuide}}" style="width: 100%; height: 28px; margin: 0; accent-color: {{bodyColor}}">
-<div style="display: flex; justify-content: space-between; font-size: 11px; color: #9FB3BF">
+<input data-dev id="sw-guide" type="range" min="3" max="14" step="0.5" value="{{bpm}}" onChange="{{onGuide}}" style="width: 100%; height: 28px; margin: 0; accent-color: {{bodyColor}}">
+<div data-dev style="display: flex; justify-content: space-between; font-size: 11px; color: #9FB3BF">
 <span>Slower</span>
 <span>Faster</span>
 </div>
-<div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px">
+<div data-dev style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px">
 <label for="sw-guide2" style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1">Guide 2 rhythm (pair)</label>
 <div style="font-size: 12px; color: #E8F1F2">{{guide2Label}}</div>
 </div>
-<input id="sw-guide2" type="range" min="3" max="14" step="0.5" value="{{bpm2}}" onChange="{{onGuide2}}" style="width: 100%; height: 28px; margin: 0; accent-color: {{bodyColor}}">
+<input data-dev id="sw-guide2" type="range" min="3" max="14" step="0.5" value="{{bpm2}}" onChange="{{onGuide2}}" style="width: 100%; height: 28px; margin: 0; accent-color: {{bodyColor}}">
 <div style="display: flex; flex-wrap: wrap; column-gap: 18px; margin-top: 2px; font-size: 12px; color: #E8F1F2">
-<label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{fishBgOn}}" onChange="{{onFishBg}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Background fish</label>
-<label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{fishFgOn}}" onChange="{{onFishFg}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Foreground fish</label>
+<label data-dev style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{fishBgOn}}" onChange="{{onFishBg}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Background fish</label>
+<label data-dev style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{fishFgOn}}" onChange="{{onFishFg}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Foreground fish</label>
 <label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{soundOn}}" onChange="{{onSound}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Sound (headphones)</label>
 <label style="display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer"><input type="checkbox" checked="{{micOn}}" onChange="{{onMic}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{bodyColor}}">Microphone</label>
 </div>
@@ -202,12 +213,12 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <div ref="{{micStatusRef}}" style="font-size: 11px; line-height: 1.4; color: #E8F1F2">Listening</div>
 </div>
 <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px">
-<div ref="{{depthRef}}" style="font-size: 11px; color: #E8F1F2; width: 64px; white-space: nowrap">0 px</div>
-<div style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1; width: 38px">Sync</div>
-<div style="flex-grow: 1; height: 6px; border-radius: 3px; background: rgba(232,241,242,0.12); overflow: hidden">
+<div data-dev ref="{{depthRef}}" style="font-size: 11px; color: #E8F1F2; width: 64px; white-space: nowrap">0 px</div>
+<div data-dev style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #B7C7D1; width: 38px">Sync</div>
+<div data-dev style="flex-grow: 1; height: 6px; border-radius: 3px; background: rgba(232,241,242,0.12); overflow: hidden">
 <div ref="{{syncRef}}" style="width: 100%; height: 6px; border-radius: 3px; background: {{bodyColor}}; transform-origin: left center; transform: scaleX(0.02)"></div>
 </div>
-<button type="button" onClick="{{onRestart}}" style="min-height: 28px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(232,241,242,0.25); background: transparent; color: #E8F1F2; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer">Restart</button>
+<button type="button" onClick="{{onRestart}}" style="margin-left: auto; min-height: 28px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(232,241,242,0.25); background: transparent; color: #E8F1F2; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer">Restart</button>
 </div>
 </div>
 <div style="position: absolute; left: 0; right: 0; bottom: 36px; display: flex; flex-direction: column; align-items: center; gap: 12px">
