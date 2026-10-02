@@ -846,7 +846,10 @@ class Component extends DCLogic {
     }
     // limits that keep the strands believable at the extremes (very fast breathing, rapid taps, top speed):
     // links never move faster than water lets them, never fold back on themselves, and the anchor never jumps
-    var VMAX = 520, MAXBEND = 0.7, DIPSTEP = 4;
+    // Rotation clamps, set just above the largest values measured in a normal breathing cycle with no limits:
+    // joint bend 53 deg just under the rim and under 25 deg further down, and 69 deg from hanging straight.
+    var VMAX = 520, DIPSTEP = 4, MAXABS = 70 * Math.PI / 180;
+    function maxBend(j) { var k = j - KR; return (k <= 4 ? 55 : Math.max(30, 55 - (k - 4) * 5)) * Math.PI / 180; }
     function stepStrand(S1, rt, n1, h, ts, flowY, drift) {
       var X = S1.x, Y = S1.y, PX = S1.px, PY = S1.py;
       // root section: pinned to the rim, along the margin's tangent
@@ -872,13 +875,15 @@ class Component extends DCLogic {
         var kb = KB * (1 - (jb - KR) / (JN - KR)) + 0.003 + 0.14 * Math.exp(-(jb - KR) / 2);
         X[jb] += ((X[jb - 1] + X[jb + 1]) / 2 - X[jb]) * kb; Y[jb] += ((Y[jb - 1] + Y[jb + 1]) / 2 - Y[jb]) * kb;
       }
-      // fixed link lengths, solved from the root down (each link follows its parent), and no joint bends further
-      // than a strand in water can: a link that would fold back is turned to the limit instead
+      // fixed link lengths, solved from the root down (each link follows its parent); each link's rotation is clamped
+      // to what the normal cycle needs, relative to its parent and from hanging straight
       for (var jl = KR + 1; jl <= JN; jl++) {
         var ex = X[jl] - X[jl - 1], ey = Y[jl] - Y[jl - 1];
         var pa = Math.atan2(X[jl - 1] - X[jl - 2], Y[jl - 1] - Y[jl - 2]), ca = Math.atan2(ex, ey), da = ca - pa;
         while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
-        if (da > MAXBEND) ca -= (da - MAXBEND) * 0.35; else if (da < -MAXBEND) ca -= (da + MAXBEND) * 0.35;   // eased back, never snapped
+        var mb = maxBend(jl);
+        if (da > mb) ca = pa + mb; else if (da < -mb) ca = pa - mb;
+        if (ca > MAXABS) ca = MAXABS; else if (ca < -MAXABS) ca = -MAXABS;
         X[jl] = X[jl - 1] + Math.sin(ca) * S1.L; Y[jl] = Y[jl - 1] + Math.cos(ca) * S1.L;
       }
     }
