@@ -610,7 +610,7 @@ class Component extends DCLogic {
       // or brighter than the exhales so far are inhale candidates
       ev.cue = this.micCueAt(ev.t0);
       if (!m.anchor) { m.anchor = ev.f.slice(); label = 'ex'; }
-      else if (ev.cue) label = ev.cue;                      // breathing with the cue: the cue labels it
+      else if (ev.cue) label = m.lastLabel === ev.cue ? (ev.cue === 'in' ? 'ex' : 'in') : ev.cue;   // the cue labels it, but breaths alternate (your rhythm may drift from the cue)
       else {
         var exs = m.events.filter(function (x) { return x.label === 'ex'; }).map(function (x) { return x.f; }).concat([m.anchor]);
         var r0 = 0, r1 = 0; exs.forEach(function (x) { r0 += x[0]; r1 += x[1]; }); r0 /= exs.length; r1 /= exs.length;
@@ -618,7 +618,7 @@ class Component extends DCLogic {
         label = (m.lastLabel !== 'in' && ev.f[0] < r0 - 4 && ev.f[1] > r1 + 0.25) ? 'in' : 'ex';
       }
     }
-    ev.label = label;
+    ev.label = label; ev.live = label;
     if (label === 'ex') this.breathStart(ev.t0); else if (label === 'in') this.inhaleStart(ev.t0);
   }
   micEnd(ev) {
@@ -627,7 +627,7 @@ class Component extends DCLogic {
     if (ev.label === 'ex') this.breathEnd(); else if (ev.label === 'in') this.inhaleEnd();
     if (ev.label === 'x' && m.guard != null) m.guard = Math.min(m.exPeakMin != null ? m.exPeakMin - 2 : Infinity, Math.max(m.guard, ev.peak + 2));
     if (ev.label !== 'x') m.lastLabel = ev.label;
-    if (ev.dur >= 0.25) { m.events.push({ t0: ev.t0, f: ev.f, peak: ev.peak, dur: ev.dur, label: ev.label, cue: ev.cue || null }); if (m.events.length > 60) m.events.shift(); }
+    if (ev.dur >= 0.25) { m.events.push({ t0: ev.t0, f: ev.f, peak: ev.peak, dur: ev.dur, label: ev.label, live: ev.live || ev.label, cue: ev.cue || null }); if (m.events.length > 60) m.events.shift(); }
   }
   micFinalize() {
     var m = this.mic, evs = m.events.slice();
@@ -650,21 +650,18 @@ class Component extends DCLogic {
       }
       var sepd = Math.abs(cA[0] - cB[0]) / 4 + Math.abs(cA[1] - cB[1]) / 0.3;
       var hasB = asg.indexOf('B') >= 0;
-      // which group is the inhales? Normally the quieter one (exhales are almost always louder). The cues they were
-      // heard under can overrule that, but only with strong evidence: someone breathing at their own pace instead of
-      // with the cue produces scattered cue tags that mustn't flip the result.
-      var cueVote = 0;                                  // + means group B sounded under "Breathe in"
-      evs.forEach(function (x, k) { if (x.cue) cueVote += (asg[k] === 'B' ? 1 : -1) * (x.cue === 'in' ? 1 : -1); });
-      var inGroup = cueVote <= -3 ? 'A' : 'B';
+      // when the two groups separate by ear, the quieter one is the inhales (exhales are almost always louder).
+      // The cue doesn't overrule the sound: a rhythm that drifts from the cue would make it lie.
+      var inGroup = 'B';
       evs.forEach(function (x, k) { x.label = !hasB || sepd < 2 ? 'ex' : asg[k] === inGroup ? 'in' : 'ex'; });
     }
     var ex = evs.filter(function (x) { return x.label === 'ex'; }), inn = evs.filter(function (x) { return x.label === 'in'; });
     // timing cue: if the features found no inhales but the events come in short-long pairs, both are audible and alike
     var cIn = evs.filter(function (x) { return x.cue === 'in'; }).length, cEx = evs.filter(function (x) { return x.cue === 'ex'; }).length;
     if (inn.length < 2 && cIn >= 2 && cEx >= 2) {
-      // the sounds don't separate by ear, but they kept arriving under the "Breathe in" cue: inhales are audible
-      // and sound like exhales, so label by the cue
-      evs.forEach(function (x) { if (x.cue) x.label = x.cue; });
+      // the sounds don't separate by ear, but some kept arriving under the "Breathe in" cue: inhales are audible
+      // and sound like exhales, so keep the labels given live (the cue, kept alternating)
+      evs.forEach(function (x) { x.label = x.live || x.label; });
       ex = evs.filter(function (x) { return x.label === 'ex'; }); inn = evs.filter(function (x) { return x.label === 'in'; });
     } else if (inn.length < 2 && evs.length >= 6) {
       {
@@ -1106,6 +1103,9 @@ class Component extends DCLogic {
     }
     if (s.inhaling) s.resting = false;
     var owed = s.queue.length > 0, ph = s.ph || 0, inPowNow = ph >= 0.4 && ph < 0.62;
+    // an inhale heard while the bell is easing, gliding or resting starts opening it now (from whatever shape it is
+    // in; bellStep eases the change), rather than waiting for the glide to run out
+    if (s.inhaling && !owed && (ph >= 0.62 || s.resting || s.relaxing)) { ph = 0; s.ph = 0; s.resting = false; s.relaxing = false; s.holdAt = null; }
     var hearIn = s.inhaleAt != null && t - s.inhaleAt < 3 * P;          // the mic is hearing your inhales
     var inDur = this.mic && this.mic.prof && this.mic.prof.in ? this.mic.prof.in.dur : 0.33 * P;
     var rate = 1 / P;
