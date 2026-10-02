@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Breath lab</title>
+<meta name="theme-color" content="#06101B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;background:#02060B;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+#stage{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+#phone{width:390px;height:844px;flex:none;transform-origin:center center;border-radius:28px;overflow:hidden;box-shadow:0 0 0 1px rgba(232,241,242,0.08),0 30px 80px rgba(0,0,0,0.6)}
+a{color:#9FD3E8}a:hover{color:#CFEAF3}
+</style>
+</head>
+<body>
+<div id="stage"><div id="phone"></div></div>
+<template id="tpl">
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #06101B; color: #E8F1F2; font-family: 'IBM Plex Mono', ui-monospace, monospace">
+<svg viewBox="0 0 390 300" style="position: absolute; left: 0; top: 0; width: 390px; height: 300px" aria-hidden="true">
+<defs>
+<linearGradient id="bl-water" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" style="stop-color: #123450"></stop>
+<stop offset="1" style="stop-color: #06101B"></stop>
+</linearGradient>
+<linearGradient id="bl-bellfill" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" style="stop-color: {{bodyColor}}; stop-opacity: 0.95"></stop>
+<stop offset="1" style="stop-color: {{bodyColor}}; stop-opacity: 0.4"></stop>
+</linearGradient>
+<filter id="bl-halo" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"></feGaussianBlur></filter>
+</defs>
+<rect x="0" y="0" width="390" height="300" style="fill: url(#bl-water)"></rect>
+<g ref="{{swayRef}}">
+<g ref="{{bodyRef}}">
+<svg x="135" y="12" width="120" height="190" viewBox="0 0 240 380" style="overflow: visible">
+<ellipse ref="{{haloRef}}" cx="120" cy="125" rx="90" ry="80" filter="url(#bl-halo)" style="fill: {{bodyColor}}; opacity: 0.15"></ellipse>
+<path ref="{{tentRef}}" d="M 0 0" style="fill: none; stroke: {{bodyColor}}; stroke-opacity: 0.55; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round"></path>
+<path ref="{{bellRef}}" d="M 0 0" style="fill: url(#bl-bellfill); stroke: {{bodyColor}}; stroke-width: 3; stroke-linejoin: round"></path>
+<path ref="{{innerRef}}" d="M 0 0" style="fill: #FFFFFF; opacity: 0.12"></path>
+<ellipse ref="{{glossRef}}" cx="90" cy="100" rx="20" ry="10" style="fill: #FFFFFF; opacity: 0.2"></ellipse>
+</svg>
+</g>
+</g>
+</svg>
+<div style="position: absolute; left: 0; right: 0; top: 236px; display: flex; flex-direction: column; align-items: center; gap: 8px">
+<div style="position: relative; width: 300px; height: 28px">
+<div ref="{{cueInRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; opacity: 0">Breathe in</div>
+<div ref="{{cueOutRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; opacity: 0">Breathe out</div>
+<div ref="{{cueRestRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; color: #B7C7D1; opacity: 0">Glide</div>
+<div ref="{{cueStartRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; opacity: 1">Turn on the mic to begin</div>
+</div>
+<div style="width: 180px; height: 4px; border-radius: 2px; background: rgba(232,241,242,0.12); overflow: hidden">
+<div ref="{{swellRef}}" style="width: 180px; height: 4px; border-radius: 2px; background: {{bodyColor}}; transform-origin: center; transform: scaleX(0.12)"></div>
+</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; top: 300px; bottom: 0; padding: 10px 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(232,241,242,0.1); background: #071320">
+<div style="display: flex; gap: 8px; align-items: center">
+<button type="button" onClick="{{onMicToggle}}" style="min-height: 30px; padding: 4px 12px; border-radius: 8px; border: 1px solid {{micBtnRing}}; background: {{micBtnFill}}; color: #E8F1F2; font-family: inherit; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer">{{micLabel}}</button>
+<button type="button" onClick="{{onRecalibrate}}" style="min-height: 30px; padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(232,241,242,0.25); background: transparent; color: #E8F1F2; font-family: inherit; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer">Recalibrate</button>
+<label style="margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #B7C7D1; cursor: pointer"><input type="checkbox" checked="{{keepCues}}" onChange="{{onKeepCues}}" style="width: 16px; height: 16px; margin: 0; accent-color: {{bodyColor}}">Cues after</label>
+</div>
+<div style="display: flex; align-items: center; gap: 10px">
+<label for="bl-bpm" style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #B7C7D1; white-space: nowrap">Cue rhythm</label>
+<input id="bl-bpm" type="range" min="3" max="14" step="0.5" value="{{bpm}}" onChange="{{onBpm}}" style="flex-grow: 1; height: 24px; margin: 0; accent-color: {{bodyColor}}">
+<div style="font-size: 11px; width: 64px; text-align: right">{{bpmLabel}}</div>
+</div>
+<div ref="{{statusRef}}" style="font-size: 11px; line-height: 1.45; min-height: 32px; white-space: pre-line; color: #E8F1F2">Microphone off</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #9FB3BF; width: 34px">Level</div>
+<div style="position: relative; flex-grow: 1; height: 8px; border-radius: 4px; background: rgba(232,241,242,0.12); overflow: hidden">
+<div ref="{{lvlRef}}" style="position: absolute; left: 0; top: 0; width: 100%; height: 8px; background: #E8F1F2; transform-origin: left center; transform: scaleX(0)"></div>
+<div ref="{{thrRef}}" style="position: absolute; top: 0; left: 27%; width: 2px; height: 8px; background: #F4A259"></div>
+</div>
+<div ref="{{lvlTxtRef}}" style="font-size: 10px; width: 56px; text-align: right; color: #B7C7D1">-- dB</div>
+</div>
+<canvas ref="{{tlRef}}" width="716" height="268" style="width: 358px; height: 134px; border-radius: 6px; background: #050E18"></canvas>
+<div style="display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 10px; color: #9FB3BF">
+<span><span style="color: #B9A7F0">■</span> inhale</span>
+<span><span style="color: #8FD3E8">■</span> exhale</span>
+<span><span style="color: #6B7C88">■</span> ignored</span>
+<span><span style="color: #F4A259">—</span> threshold</span>
+<span>bottom strip: cue on screen</span>
+</div>
+<div style="display: flex; gap: 10px; min-height: 0">
+<canvas ref="{{fpRef}}" width="300" height="300" style="width: 150px; height: 150px; flex: none; border-radius: 6px; background: #050E18"></canvas>
+<div ref="{{tableRef}}" style="flex-grow: 1; font-size: 10px; line-height: 1.5; white-space: pre; overflow: hidden; color: #CFDCE3"></div>
+</div>
+</div>
+</div>
+</template>
+<script>
+const PROPS = {"micThreshold": 8, "calBreaths": 4, "bodyColor": "#8FD3E8"};
+
+// ---- minimal runtime: mounts the template, wires bindings, events and refs (stands in for the design-tool runtime) ----
+class DCLogic {
+  constructor(props) { this.props = props; this.state = null; }
+  setState(patch) { this.state = Object.assign({}, this.state, patch); scheduleUpdate(); }
+  forceUpdate() { scheduleUpdate(); }
+}
+const HOLE = /\{\{\s*([\w.]+)\s*\}\}/g;
+const ONLY = /^\{\{\s*([\w.]+)\s*\}\}$/;
+const bindings = [];
+let comp, vals, pending = false;
+function get(path) { return path.split('.').reduce((o, k) => (o == null ? o : o[k]), vals); }
+function fill(t) { return t.replace(HOLE, (_, p) => { const v = get(p); return v == null ? '' : String(v); }); }
+function apply() {
+  for (const b of bindings) {
+    if (b.kind === 'attr') b.el.setAttribute(b.name, fill(b.tmpl));
+    else if (b.kind === 'checked') b.el.checked = !!get(b.key);
+    else if (b.kind === 'value') { const v = get(b.key); if (document.activeElement !== b.el) b.el.value = v; }
+    else if (b.kind === 'text') b.node.nodeValue = fill(b.tmpl);
+  }
+}
+function scheduleUpdate() {
+  if (pending) return; pending = true;
+  requestAnimationFrame(() => { pending = false; vals = comp.renderVals(); apply(); });
+}
+function mount(host, html, Ctor, props) {
+  comp = new Ctor(props);
+  vals = comp.renderVals();
+  host.innerHTML = html;
+  host.querySelectorAll('*').forEach(el => {
+    for (const at of Array.from(el.attributes)) {
+      if (at.value.indexOf('{{') < 0) continue;
+      const only = at.value.match(ONLY), name = at.name;
+      if (name === 'ref' && only) { el.removeAttribute(name); vals[only[1]](el); }
+      else if (name.startsWith('on') && only) {
+        el.removeAttribute(name);
+        let evt = name.slice(2).toLowerCase();
+        if (evt === 'change' && el.type === 'range') evt = 'input';
+        const key = only[1];
+        el.addEventListener(evt, ev => { const f = get(key); if (f) f(ev); });
+      }
+      else if (name === 'checked' && only) { el.removeAttribute(name); bindings.push({ kind: 'checked', el, key: only[1] }); }
+      else if (name === 'value' && only && el.tagName === 'INPUT') { el.removeAttribute(name); bindings.push({ kind: 'value', el, key: only[1] }); }
+      else bindings.push({ kind: 'attr', el, name, tmpl: at.value });
+    }
+  });
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+  let n; while ((n = walker.nextNode())) if (n.nodeValue.indexOf('{{') >= 0) bindings.push({ kind: 'text', node: n, tmpl: n.nodeValue });
+  apply();
+  if (comp.componentDidMount) comp.componentDidMount();
+}
+// fit the 390 x 844 phone frame to the window
+function fit() {
+  const k = Math.min(window.innerWidth / 390, window.innerHeight / 844, 1.25);
+  document.getElementById('phone').style.transform = 'scale(' + k + ')';
+}
+window.addEventListener('resize', fit);
+window.addEventListener('DOMContentLoaded', () => {
+  mount(document.getElementById('phone'), document.getElementById('tpl').innerHTML, Component, PROPS);
+  fit();
+});
+
+
+
+
+// Breath lab: the jellyfish and the breath identification from Swell, with nothing else, plus the instruments for
+// tuning breath ID: a live level trace against the threshold, every detected sound against the cue that was on
+// screen, a table of recent sounds (features, cue, live and final labels) and the sounds plotted by their features.
+class Component extends DCLogic {
+  ref(name) {
+    this._refs = this._refs || {}; this._els = this._els || {};
+    var self = this;
+    if (!this._refs[name]) this._refs[name] = function (el) { self._els[name] = el; };
+    return this._refs[name];
+  }
+  init() {
+    if (this.sim) return;
+    this.sim = {
+      c: 0, v: 0, dist: 0, wave: 0, guide: 0, now: 0, phase: 'start', t0: null,
+      holding: false, kicks: 0, queue: [], curLeft: 0, ph: 0, resting: true, inPow: false,
+      rate: null, steady: 0, steadyShown: 0, presses: [], hist: [], trace: []
+    };
+  }
+  componentDidMount() {
+    this.init();
+    var self = this;
+    var loop = function (ms) { self._raf = requestAnimationFrame(loop); self.tick(ms / 1000); };
+    this._raf = requestAnimationFrame(loop);
+  }
+  componentWillUnmount() { cancelAnimationFrame(this._raf); this.stopMic(); }
+  cueBpm() { var st = this.state || {}; return st.bpm ?? 6; }
+  recalibrate() {
+    this.sim = null; this.init();
+    var m = this.mic;
+    if (m) { m.mode = 'calibrating'; m.events = []; m.log = []; m.lastEndT = null; m.lastLabel = null; m.prof = null; m.guard = null; m.warn = null; m.anchorIn = null; m.exPeakMin = null; }
+  }
+
+  // ---------- microphone ----------
+  setMic(on) {
+    var self = this;
+    if (!on) { this.stopMic(); this.micErr = null; this.setState({ mic: false }); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { this.micErr = 'No microphone available here'; this.setState({ mic: false }); return; }
+    this.micErr = 'Asking for the microphone';
+    this.setState({ mic: true });
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }).then(function (stream) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      var ctx = new AC(), src = ctx.createMediaStreamSource(stream), hp = ctx.createBiquadFilter(), an = ctx.createAnalyser();
+      hp.type = 'highpass'; hp.frequency.value = 100; an.fftSize = 1024; an.smoothingTimeConstant = 0;
+      src.connect(hp); hp.connect(an); ctx.resume();
+      var track = stream.getAudioTracks()[0], set = track && track.getSettings ? track.getSettings() : {};
+      var inLat = typeof set.latency === 'number' ? set.latency : null;
+      var frame = an.fftSize / ctx.sampleRate;
+      var lag = (inLat == null ? 0.02 : inLat) + frame / 2 + 0.06;      // device input + half an analysis window + onset hold
+      self.mic = { ctx: ctx, stream: stream, an: an, buf: new Float32Array(an.frequencyBinCount), sr: ctx.sampleRate,
+        floor: null, eS: -140, rel: 0, ev: null, above: 0, below: 0, lag: lag, inLat: inLat,
+        mode: 'calibrating', events: [], log: [], lastLabel: null, lastEndT: null, prof: null, guard: null, warn: null };
+      self.sim = null; self.init();
+      self.micErr = null;
+    }).catch(function (err) { self.micErr = 'Microphone unavailable (' + ((err && err.name) || 'error') + ')'; self.setState({ mic: false }); });
+  }
+  stopMic() {
+    var m = this.mic; if (!m) return;
+    m.stream.getTracks().forEach(function (tr) { tr.stop(); }); m.ctx.close(); this.mic = null;
+  }
+  micOnThreshold() {
+    var base = this.props.micThreshold ?? 8, m = this.mic;
+    return m && m.mode === 'exhale' && m.guard != null ? Math.max(base, m.guard) : base;
+  }
+  micFrame(t, dt) {
+    var m = this.mic; if (!m) return;
+    m.an.getFloatFrequencyData(m.buf);
+    var binHz = m.sr / m.an.fftSize, pw = 0, pc = 0;
+    var lo = Math.floor(150 / binHz), hi = Math.min(m.buf.length - 1, Math.ceil(4000 / binHz));
+    for (var i = lo; i <= hi; i++) { var q = Math.pow(10, m.buf[i] / 10); pw += q; pc += q * i * binHz; }
+    var e = 10 * Math.log10(pw + 1e-14), cen = pw > 0 ? pc / pw : 0;
+    m.cen = cen;
+    if (m.warm == null) { m.warm = 0; m.eS = e; }
+    m.eS += (e - m.eS) * (1 - Math.exp(-dt / (e > m.eS ? 0.03 : 0.09)));       // fast attack, slower release
+    if (m.warm < 1) { m.warm += dt; m.floor = m.floor == null ? m.eS : Math.min(m.floor + (m.eS - m.floor) * 0.2, m.eS); m.rel = 0; return; }   // learn the room for a second first
+    if (!m.ev) m.floor += (m.eS - m.floor) * (1 - Math.exp(-dt / (m.eS < m.floor ? 0.3 : 6)));   // the floor sinks quickly, rises slowly
+    var rel = m.eS - m.floor; m.rel = rel;
+    var onT = this.micOnThreshold(), offT = Math.max(2.5, onT * 0.45);
+    if (!m.ev) {
+      m.above = rel > onT ? m.above + dt : 0;
+      if (m.above >= 0.06) { m.ev = { t0: t - m.lag, levels: [], cens: [], peak: rel, dur: 0, decided: false }; m.below = 0; }
+    } else {
+      var ev = m.ev; ev.dur = t - ev.t0; ev.peak = Math.max(ev.peak, rel);
+      if (ev.levels.length < 7) { ev.levels.push(rel); ev.cens.push(cen); }
+      if (!ev.decided && ev.levels.length >= 7) this.micDecide(ev);
+      m.below = rel < offT ? m.below + dt : 0;
+      if (m.below >= 0.15) this.micEnd(ev);
+      else if (ev.dur > 8) { this.micEnd(ev); m.floor = m.eS; }    // nothing breathes for 8 s: the room got louder, re-learn the floor
+    }
+  }
+  micFeat(ev) {
+    var a = 0, c = 0; for (var i = 0; i < ev.levels.length; i++) { a += ev.levels[i]; c += ev.cens[i]; }
+    return [a / ev.levels.length, Math.log2(Math.max(60, c / ev.levels.length))];
+  }
+  micClassify(f, cue) {
+    var m = this.mic, P = m.prof, best = null, bs = -1e9;
+    ['ex', 'in'].forEach(function (k) {
+      var sc = 0;
+      for (var j = 0; j < 2; j++) { var z = (f[j] - P[k].mu[j]) / P[k].sd[j]; sc -= 0.5 * z * z + Math.log(P[k].sd[j]); }
+      sc += Math.log(m.lastLabel == null ? 0.5 : (m.lastLabel === k ? 0.25 : 0.75));   // breaths alternate
+      if (cue) sc += Math.log(cue === k ? 0.8 : 0.2);                                   // the cue showing when it began
+      if (sc > bs) { bs = sc; best = k; }
+    });
+    return best;
+  }
+  cuePhaseAt(t0) {
+    var s = this.sim; if (!s || s.phase !== 'swim' || !this.cueVisible) return null;
+    var now = performance.now() / 1000, cyc = 60 / this.cueBpm();
+    return ((s.guide - (now - t0) / cyc) % 1 + 1) % 1;
+  }
+  // A sound that starts under "Breathe in" is very likely an inhale and one under "Breathe out" an exhale; the edges
+  // (just before "Breathe out", and "Glide") say nothing.
+  micCueAt(t0) {
+    var ph = this.cuePhaseAt(t0); if (ph == null) return null;
+    return ph >= 0.95 || ph < 0.33 ? 'in' : ph >= 0.36 && ph < 0.62 ? 'ex' : null;
+  }
+  // the clear middle of each cue
+  micCueCore(t0) {
+    var ph = this.cuePhaseAt(t0); if (ph == null) return null;
+    return ph >= 0.97 || ph < 0.3 ? 'in' : ph >= 0.4 && ph < 0.6 ? 'ex' : null;
+  }
+  // A breath often reaches the mic in pieces. A sound that starts within 0.5 s of the previous one ending continues
+  // that breath (same label, not a new breath), unless it starts under the other breath's cue.
+  micCont(ev) {
+    var m = this.mic, s = this.sim;
+    if (m.lastEndT == null || !m.lastLabel || !s || s.phase === 'start' || ev.t0 - m.lastEndT > 0.5) return false;
+    var cueNow = m.mode === 'calibrating' ? this.micCueAt(ev.t0) : this.micCueCore(ev.t0);
+    if (cueNow && cueNow !== m.lastLabel) return false;
+    ev.cont = true; ev.decided = true; ev.label = m.lastLabel; ev.live = m.lastLabel; ev.cue = null; ev.core = null;
+    if (ev.label === 'in') s.inhaling = true;
+    return true;
+  }
+  micDecide(ev) {
+    var m = this.mic; ev.decided = true; ev.f = this.micFeat(ev);
+    if (this.micCont(ev)) return;
+    var label;
+    if (m.mode === 'both') { ev.cue = this.micCueAt(ev.t0); label = this.micClassify(ev.f, ev.cue); }
+    else if (m.mode === 'exhale') {
+      // exhales only: anything far quieter or far brighter than your exhales is a stray inhale or room noise
+      var P = m.prof.ex;
+      var stray = ev.f[0] < P.mu[0] - 3 * P.sd[0] || ev.f[1] > P.mu[1] + 3 * P.sd[1];
+      label = stray ? 'x' : 'ex';
+      if (stray) { var cap = m.exPeakMin != null ? m.exPeakMin - 2 : Infinity; m.guard = Math.min(cap, Math.max(m.guard || 0, ev.peak + 2)); }
+    }
+    else {
+      // calibrating: the session opens on "Breathe in" and waits for a sound. That first sound is an inhale, and the
+      // cues start from it, so the first cue lines up with your actual breath.
+      var sS = this.sim;
+      if (sS && sS.phase === 'start') {
+        var cycS = 60 / this.cueBpm(), nowS = performance.now() / 1000;
+        sS.phase = 'swim'; sS.t0 = ev.t0; sS.guide = (Math.max(0, nowS - ev.t0) / cycS) % 1;
+        m.anchorIn = ev.f.slice(); ev.cue = 'in'; label = 'in';
+      }
+      else if ((ev.core = this.micCueCore(ev.t0))) { label = ev.core; ev.cue = ev.core; }   // clearly inside a cue: the cue labels it
+      else if ((ev.cue = this.micCueAt(ev.t0))) label = ev.cue;                              // the cue on screen labels it
+      else {
+        // no cue to go on: judge by sound against the exhales heard so far, and keep breaths alternating
+        var exs = m.events.filter(function (x) { return x.label === 'ex'; }).map(function (x) { return x.f; });
+        if (!exs.length) label = m.lastLabel === 'in' ? 'ex' : 'in';
+        else {
+          var r0 = 0, r1 = 0; exs.forEach(function (x) { r0 += x[0]; r1 += x[1]; }); r0 /= exs.length; r1 /= exs.length;
+          label = (m.lastLabel !== 'in' && ev.f[0] < r0 - 4 && ev.f[1] > r1 + 0.25) ? 'in' : 'ex';
+        }
+      }
+    }
+    ev.label = label; ev.live = label;
+    if (label === 'ex') this.breathStart(ev.t0); else if (label === 'in') this.inhaleStart(ev.t0);
+  }
+  micEnd(ev) {
+    var m = this.mic; m.ev = null;
+    if (!ev.decided && !ev.cont) { ev.f = this.micFeat(ev); this.micCont(ev); }
+    var rec;
+    if (ev.cont) {
+      if (ev.label === 'in') this.inhaleEnd();
+      var lastE = m.events[m.events.length - 1];
+      if (lastE) lastE.dur = Math.max(lastE.dur, ev.t0 + ev.dur - lastE.t0);
+      m.lastEndT = performance.now() / 1000;
+      rec = { t0: ev.t0, dur: ev.dur, f: ev.f, peak: ev.peak, label: ev.label, live: ev.label, cue: null, core: null, cont: true, mode: m.mode, parent: lastE || null };
+      m.log.push(rec); if (m.log.length > 200) m.log.shift();
+      return;
+    }
+    if (!ev.decided) { ev.f = this.micFeat(ev); ev.label = m.mode === 'both' && m.prof ? this.micClassify(ev.f, this.micCueAt(ev.t0)) : 'ex'; ev.live = ev.label; ev.decided = true; if (ev.label === 'ex') this.breathStart(ev.t0); else this.inhaleStart(ev.t0); }
+    if (ev.label === 'ex') this.breathEnd(); else if (ev.label === 'in') this.inhaleEnd();
+    if (ev.label === 'x' && m.guard != null) m.guard = Math.min(m.exPeakMin != null ? m.exPeakMin - 2 : Infinity, Math.max(m.guard, ev.peak + 2));
+    if (ev.label !== 'x') { m.lastLabel = ev.label; m.lastEndT = performance.now() / 1000; }
+    rec = { t0: ev.t0, f: ev.f, peak: ev.peak, dur: ev.dur, label: ev.label, live: ev.live || ev.label, cue: ev.cue || null, core: ev.core || null, mode: m.mode, short: ev.dur < 0.25 };
+    if (!rec.short) { m.events.push(rec); if (m.events.length > 60) m.events.shift(); }
+    m.log.push(rec); if (m.log.length > 200) m.log.shift();
+  }
+  micFinalize() {
+    var m = this.mic, evs = m.events.slice();
+    // Re-sort everything heard so far into two groups by its features (2-means on level and centroid)
+    if (evs.length >= 3) {
+      var cA = evs.reduce(function (p, x) { return x.f[0] > p.f[0] ? x : p; }).f.slice();
+      var cB = evs.reduce(function (p, x) { return x.f[0] < p.f[0] ? x : p; }).f.slice();
+      var asg = [];
+      for (var it = 0; it < 8; it++) {
+        asg = evs.map(function (x) {
+          var dA = Math.pow((x.f[0] - cA[0]) / 4, 2) + Math.pow((x.f[1] - cA[1]) / 0.3, 2);
+          var dB = Math.pow((x.f[0] - cB[0]) / 4, 2) + Math.pow((x.f[1] - cB[1]) / 0.3, 2);
+          return dA <= dB ? 'A' : 'B';
+        });
+        [['A', cA], ['B', cB]].forEach(function (pair) {
+          var mem = evs.filter(function (x, k) { return asg[k] === pair[0]; });
+          if (mem.length) { pair[1][0] = mem.reduce(function (p, x) { return p + x.f[0]; }, 0) / mem.length; pair[1][1] = mem.reduce(function (p, x) { return p + x.f[1]; }, 0) / mem.length; }
+        });
+      }
+      var sepd = Math.abs(cA[0] - cB[0]) / 4 + Math.abs(cA[1] - cB[1]) / 0.3;
+      var hasB = asg.indexOf('B') >= 0;
+      // the quieter group is the inhales, unless the sounds made clearly inside a cue mostly say the opposite
+      var inGroup = 'B', nCore = 0, agreeB = 0;
+      evs.forEach(function (x, k) { if (x.core) { nCore++; if ((asg[k] === 'B' ? 'in' : 'ex') === x.core) agreeB++; } });
+      if (hasB && nCore >= 4 && agreeB / nCore <= 0.35) inGroup = 'A';
+      evs.forEach(function (x, k) { x.label = !hasB || sepd < 2 ? 'ex' : asg[k] === inGroup ? 'in' : 'ex'; });
+      // a sound made clearly inside a cue keeps that cue's label unless it sounds unmistakably like the other kind
+      if (hasB && sepd >= 2) evs.forEach(function (x) {
+        if (!x.core || x.core === x.label) return;
+        var cIn = inGroup === 'A' ? cA : cB, cEx = inGroup === 'A' ? cB : cA;
+        function dd(c) { return Math.sqrt(Math.pow((x.f[0] - c[0]) / 4, 2) + Math.pow((x.f[1] - c[1]) / 0.3, 2)); }
+        var dCue = dd(x.core === 'in' ? cIn : cEx), dOther = dd(x.core === 'in' ? cEx : cIn);
+        if (dCue < 3 * dOther) x.label = x.core;
+      });
+      m.groups = { cA: cA, cB: cB, inGroup: inGroup, sepd: sepd };
+    }
+    var ex = evs.filter(function (x) { return x.label === 'ex'; }), inn = evs.filter(function (x) { return x.label === 'in'; });
+    var cIn2 = evs.filter(function (x) { return x.cue === 'in'; }).length, cEx2 = evs.filter(function (x) { return x.cue === 'ex'; }).length;
+    var agree = evs.filter(function (x) { return x.label === (x.live || x.label); }).length / Math.max(1, evs.length), liveAlt = 0;
+    for (var la = 1; la < evs.length; la++) if ((evs[la].live || evs[la].label) !== (evs[la - 1].live || evs[la - 1].label)) liveAlt++;
+    liveAlt = evs.length > 1 ? liveAlt / (evs.length - 1) : 0;
+    if ((inn.length < 2 || agree < 0.7) && liveAlt >= 0.8 && cIn2 >= 2 && cEx2 >= 2) {
+      // the sounds don't separate by ear: inhales are audible but sound like exhales, so keep the live labels
+      evs.forEach(function (x) { x.label = x.live || x.label; });
+      ex = evs.filter(function (x) { return x.label === 'ex'; }); inn = evs.filter(function (x) { return x.label === 'in'; });
+      m.byCue = true;
+    } else if (inn.length < 2 && evs.length >= 6) {
+      var g0 = 0, g1 = 0, n0 = 0, n1 = 0;
+      for (var i = 1; i < evs.length; i++) { var gp = evs[i].t0 - evs[i - 1].t0; if (i % 2) { g0 += gp; n0++; } else { g1 += gp; n1++; } }
+      if (n0 && n1 && (g0 / n0) / (g1 / n1) > 1.6) evs.forEach(function (x, k) { x.label = k % 2 ? 'in' : 'ex'; });
+      ex = evs.filter(function (x) { return x.label === 'ex'; }); inn = evs.filter(function (x) { return x.label === 'in'; });
+    }
+    var between = 0;
+    for (var k2 = 1; k2 < ex.length; k2++) if (inn.some(function (x) { return x.t0 > ex[k2 - 1].t0 && x.t0 < ex[k2].t0; })) between++;
+    var alt = ex.length > 1 ? between / (ex.length - 1) : 0;
+    function stats(arr) {
+      var mu = [0, 0], sd = [0, 0];
+      arr.forEach(function (x) { mu[0] += x.f[0]; mu[1] += x.f[1]; }); mu[0] /= arr.length; mu[1] /= arr.length;
+      arr.forEach(function (x) { sd[0] += Math.pow(x.f[0] - mu[0], 2); sd[1] += Math.pow(x.f[1] - mu[1], 2); });
+      sd[0] = Math.max(3, Math.sqrt(sd[0] / arr.length)); sd[1] = Math.max(0.15, Math.sqrt(sd[1] / arr.length));
+      var dur = 0; arr.forEach(function (x) { dur += x.dur; });
+      return { mu: mu, sd: sd, dur: dur / arr.length };
+    }
+    m.alt = alt;
+    if (inn.length >= 2 && alt >= 0.6) {
+      m.mode = 'both'; m.prof = { ex: stats(ex), in: stats(inn) };
+    } else {
+      m.mode = 'exhale'; m.prof = { ex: stats(ex.length ? ex : evs) };
+      if (inn.length) {
+        var inPk = Math.max.apply(null, inn.map(function (x) { return x.peak; })) + 2;
+        var exPk = Math.min.apply(null, ex.map(function (x) { return x.peak; })) - 2;
+        if (inPk > exPk) { m.guard = (inPk + exPk) / 2; m.warn = 'loud inhales overlap quiet exhales'; } else m.guard = inPk;
+      }
+    }
+    if (ex.length) m.exPeakMin = Math.min.apply(null, ex.map(function (x) { return x.peak; }));
+  }
+
+  // ---------- breaths ----------
+  inhaleStart(tEv) {
+    var s = this.sim; if (!s) return;
+    var now = performance.now() / 1000;
+    s.inhaling = true; s.inhaleAt = tEv == null ? now : tEv;
+  }
+  inhaleEnd() { var s = this.sim; if (!s) return; s.inhaling = false; s.inhaleEndAt = performance.now() / 1000; }
+  breathStart(tEv) {
+    var s = this.sim; if (!s || s.holding) return;
+    var t = tEv == null ? performance.now() / 1000 : tEv;
+    var prev = s.presses.length ? s.presses[s.presses.length - 1] : null;
+    s.holding = true;
+    s.presses.push(t); if (s.presses.length > 4) s.presses.shift();
+    // your rhythm: the rate estimate eases toward each new breath gap, steadiness builds over several breaths
+    var gap = prev != null && t - prev < 30 ? t - prev : null;
+    if (gap != null) {
+      if (s.gapEst == null) { s.gapEst = gap; s.steady += (0.45 - s.steady) * 0.35; }
+      else {
+        var selfQ = s.prevGap == null ? 0.5 : Math.max(0, 1 - Math.abs(gap - s.prevGap) / (0.35 * Math.max(gap, s.prevGap)));
+        s.gapEst += (gap - s.gapEst) * 0.4;
+        s.steady += (selfQ - s.steady) * 0.5;
+      }
+      s.prevGap = gap;
+      s.rate = 60 / s.gapEst;
+    }
+    s.kicks = (s.kicks || 0) + 1;
+  }
+  breathEnd() { var s = this.sim; if (!s || !s.holding) return; s.holding = false; }
+
+  // ---------- the jellyfish model (same as Swell) ----------
+  bellPulse(ph, pushFrom) {
+    var Tp = [0, 0.08, 0.33, 0.4, 0.5, 0.65, 1], Cp = [0.8, 0.45, -1.3, -1.36, 1.15, 1.0, 0.8];
+    if (pushFrom != null) Cp[3] = pushFrom;
+    for (var ii = 0; ii < Tp.length - 1; ii++) if (ph <= Tp[ii + 1]) {
+      var uu = (ph - Tp[ii]) / (Tp[ii + 1] - Tp[ii]);
+      return Cp[ii] + (Cp[ii + 1] - Cp[ii]) * (1 - Math.cos(Math.PI * uu)) / 2;
+    }
+    return Cp[Cp.length - 1];
+  }
+  strokeImpulse(e) { return 220 * (0.6 + 2.4 * e); }
+  bodyDip(J, vTop) {
+    var ph = J.ph || 0;
+    return 14 * Math.max(0, -J.c) / 1.36 - 12 * Math.min(1, J.v / vTop) - (ph >= 0.4 && ph < 0.55 ? 8 * Math.sin(Math.PI * (ph - 0.4) / 0.15) : 0);
+  }
+  bellStep(J, dt, rate, impulse, e, t) {
+    var inPow = J.ph >= 0.4 && J.ph < 0.62, dJ = 0;
+    if (inPow && !J.inPow) J.curLeft = typeof impulse === 'function' ? impulse() : impulse;
+    J.inPow = inPow;
+    if (inPow && J.curLeft > 0) {
+      var left = Math.max(0.03, (0.62 - J.ph) / rate);
+      dJ = J.curLeft * Math.min(1, dt / left);
+      J.v += dJ; J.curLeft -= dJ;
+    }
+    J.v -= (J.v / 7 + J.v * J.v / 900) * dt; if (J.v < 0) J.v = 0;
+    if (J.v > 900) J.v = 900;
+    J.dist += J.v * dt;
+    if (J.pushFrom != null && (J.ph < 0.4 || J.ph >= 0.5)) J.pushFrom = null;
+    var cT = (0.85 + 0.15 * Math.min(1, J.v / 750)) * this.bellPulse(J.ph, J.pushFrom), kc = 1 - Math.exp(-dt / 0.07);
+    if (J.c1 == null) { J.c1 = cT; J.c = cT; }
+    J.c1 += (cT - J.c1) * kc;
+    var dcMax = 5 * dt;
+    J.c += Math.max(-dcMax, Math.min(dcMax, (J.c1 - J.c) * kc));
+    J.wave += dt * 2 * Math.PI / (2.6 - 1.2 * e);
+    if (t != null) {
+      J.hist.push({ t: t, c: J.c, v: J.v });
+      while (J.hist.length > 2 && J.hist[1].t < t - 3) J.hist.shift();
+    }
+    return dJ;
+  }
+  drawJelly(J, R, t, e, vTop) {
+    var calm = 1 - e;
+    var cx = 120, cy = 150;
+    var rx0 = 66 + calm * 9, ry0 = 60 + calm * 22;
+    var spikes = 9, spikeLen = Math.max(0, e - 0.35) / 0.65 * 0.34;
+    var depth = 2 + 14 * e, belly = calm * 16, vig = 0.75 + 0.5 * e;
+    var hist = J.hist;
+    function at(tq) {
+      if (!hist.length) return { t: t, c: J.c, v: 0 };
+      if (hist[0].t > tq) return hist[0];
+      var lo = 0, hi = hist.length - 1;
+      while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (hist[mid].t <= tq) lo = mid; else hi = mid - 1; }
+      return hist[lo];
+    }
+    function lerp(a, b, k) { return a + (b - a) * k; }
+    function shape(c, cRim) {
+      var rx = rx0 * (c >= 0 ? lerp(1.0, 0.78, c) : lerp(1.0, 1.12, -c));
+      var ry = ry0 * (c >= 0 ? lerp(1.05, 1.18, c) : lerp(1.05, 0.82, -c));
+      var fl = vig * (cRim >= 0 ? lerp(0, -14, cRim) : lerp(0, 14, -cRim));
+      return { rx: rx, ry: ry, fl: fl, half: rx + fl, rimY: cy + fl * 0.4 };
+    }
+    function phiOf(c) {
+      var sh = shape(c, c), ph = Math.atan2(3 * sh.fl, sh.ry + 1.2 * sh.fl);
+      return ph >= 0 ? ph : 0.6 * ph;
+    }
+    var b = shape(J.c, at(t - 0.08).c);
+    var d = '', N = 72, M = 64;
+    for (var i = 0; i <= N; i++) {
+      var th = Math.PI - i * Math.PI / N;
+      var u = (i / N) * spikes, fr = u - Math.floor(u);
+      var r = 1 + spikeLen * (1 - Math.abs(2 * fr - 1));
+      var sg = Math.pow(1 - Math.sin(th), 3), co = Math.cos(th);
+      var x = cx + b.rx * r * co + (co > 0.001 ? 1 : co < -0.001 ? -1 : 0) * b.fl * sg;
+      var y = cy - b.ry * r * Math.sin(th) + b.fl * 0.4 * sg;
+      d += (i === 0 ? 'M ' : ' L ') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }
+    for (var k = 1; k <= M; k++) {
+      var p = k / M, vv = p * 8, f2 = vv - Math.floor(vv);
+      var bump = Math.sin(Math.PI * f2) * calm + (1 - Math.abs(2 * f2 - 1)) * e;
+      d += ' L ' + (cx + b.half - p * 2 * b.half).toFixed(1) + ' ' + (b.rimY + depth * bump + belly * Math.sin(Math.PI * p)).toFixed(1);
+    }
+    R.bell.setAttribute('d', d + ' Z');
+    var irx = b.rx * 0.62, iry = b.ry * 0.5, iy = b.rimY;
+    R.inner.setAttribute('d', 'M ' + (cx - irx).toFixed(1) + ' ' + iy.toFixed(1) + ' A ' + irx.toFixed(1) + ' ' + iry.toFixed(1) + ' 0 0 1 ' + (cx + irx).toFixed(1) + ' ' + iy.toFixed(1) + ' Q ' + cx + ' ' + (iy + 8 + calm * 8).toFixed(1) + ' ' + (cx - irx).toFixed(1) + ' ' + iy.toFixed(1) + ' Z');
+    R.gloss.setAttribute('cy', (cy - b.ry * 0.62).toFixed(1));
+    R.gloss.style.opacity = (0.62 * Math.pow(calm, 1.5)).toFixed(2);
+
+    // tentacles: simulated strands in water (principles in docs/tentacle-motion.md)
+    var GAIN = 1.4, DRAG = 2.6, FLOW0 = 12, KB = 0.03, KJ = 0.2;
+    var NS = 8, JN = 24, KR = 2, jag = Math.max(0, (e - 0.5) / 0.5);
+    var bNow = shape(J.c, J.c), rootAng = phiOf(J.c);
+    var T = J.tent;
+    function rootOf(n) {
+      var rf = -1 + 2 * n / (NS - 1);
+      return { rf: rf, x: cx + rf * bNow.half * 0.9, y: bNow.rimY + 4 + calm * 6, a: rf * (0.35 + 0.65 * Math.abs(rf)) * rootAng * GAIN };
+    }
+    var VMAX = 520, DIPSTEP = 4, MAXABS = 70 * Math.PI / 180;
+    function maxBend(j) { var k = j - KR; return (k <= 4 ? 55 : Math.max(30, 55 - (k - 4) * 5)) * Math.PI / 180; }
+    function stepStrand(S1, rt, n1, h, ts, flowY, drift) {
+      var X = S1.x, Y = S1.y, PX = S1.px, PY = S1.py;
+      for (var jr = 0; jr <= KR; jr++) {
+        X[jr] = rt.x + Math.sin(rt.a) * S1.L * jr; Y[jr] = rt.y + Math.cos(rt.a) * S1.L * jr;
+        PX[jr] = X[jr]; PY[jr] = Y[jr];
+      }
+      for (var jf = KR + 1; jf <= JN; jf++) {
+        var vx = (X[jf] - PX[jf]) / h, vy = (Y[jf] - PY[jf]) / h, sp = Math.sqrt(vx * vx + vy * vy);
+        if (sp > VMAX) { vx *= VMAX / sp; vy *= VMAX / sp; }
+        var dy = Y[jf] - rt.y, fx = drift * Math.sin(2 * Math.PI * dy / (S1.L * JN) - 2 * Math.PI * ts / 3.6 + n1 * 0.3);
+        PX[jf] = X[jf]; PY[jf] = Y[jf];
+        X[jf] += vx * h + DRAG * (fx - vx) * h * h;
+        Y[jf] += vy * h + DRAG * (flowY - vy) * h * h;
+      }
+      for (var jb = KR; jb < JN; jb++) {
+        if (jb === KR) {
+          var tx = 2 * X[KR] - X[KR - 1], ty = 2 * Y[KR] - Y[KR - 1];
+          X[KR + 1] += (tx - X[KR + 1]) * KJ; Y[KR + 1] += (ty - Y[KR + 1]) * KJ; continue;
+        }
+        var kb = KB * (1 - (jb - KR) / (JN - KR)) + 0.003 + 0.14 * Math.exp(-(jb - KR) / 2);
+        X[jb] += ((X[jb - 1] + X[jb + 1]) / 2 - X[jb]) * kb; Y[jb] += ((Y[jb - 1] + Y[jb + 1]) / 2 - Y[jb]) * kb;
+      }
+      for (var jl = KR + 1; jl <= JN; jl++) {
+        var ex = X[jl] - X[jl - 1], ey = Y[jl] - Y[jl - 1];
+        var pa = Math.atan2(X[jl - 1] - X[jl - 2], Y[jl - 1] - Y[jl - 2]), ca = Math.atan2(ex, ey), da = ca - pa;
+        while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+        var mb = maxBend(jl);
+        if (da > mb) ca = pa + mb; else if (da < -mb) ca = pa - mb;
+        if (ca > MAXABS) ca = MAXABS; else if (ca < -MAXABS) ca = -MAXABS;
+        X[jl] = X[jl - 1] + Math.sin(ca) * S1.L; Y[jl] = Y[jl - 1] + Math.cos(ca) * S1.L;
+      }
+    }
+    var vSafe = Math.min(J.v || 0, vTop);
+    var flowY = FLOW0 + 0.32 * vSafe;
+    var drift = (11 + 7 * calm) * (1 - 0.6 * vSafe / vTop);
+    if (!T) {
+      T = J.tent = { t: t, dip: null, s: [] };
+      for (var n0 = 0; n0 < NS; n0++) {
+        var r0 = rootOf(n0), L0 = (165 + calm * 14 + (n0 % 2) * 14) * (1 + 0.06 * (1 - Math.abs(r0.rf))), st = { L: L0 / JN, x: [], y: [], px: [], py: [] };
+        for (var j0 = 0; j0 <= JN; j0++) { st.x.push(r0.x); st.y.push(r0.y + j0 * st.L); st.px.push(r0.x); st.py.push(r0.y + j0 * st.L); }
+        T.s.push(st);
+        for (var w0 = 0; w0 < 240; w0++) stepStrand(st, r0, n0, 1 / 60, t - 4 + w0 / 60, flowY, drift);
+      }
+    }
+    var fdt = Math.min(0.05, Math.max(0, t - T.t)); T.t = t;
+    if (fdt > 0) {
+      var dip = J.ph != null ? this.bodyDip(J, vTop) : 0, ddp = T.dip == null ? 0 : dip - T.dip; T.dip = dip;
+      ddp = Math.max(-DIPSTEP, Math.min(DIPSTEP, ddp));
+      var sub = Math.ceil(fdt / (1 / 120)), h = fdt / sub;
+      for (var n1 = 0; n1 < NS; n1++) {
+        var S1 = T.s[n1], rt = rootOf(n1);
+        for (var jd = KR + 1; jd <= JN; jd++) { S1.y[jd] -= ddp; S1.py[jd] -= ddp; }
+        for (var sb = 0; sb < sub; sb++) stepStrand(S1, rt, n1, h, t - fdt + (sb + 1) * h, flowY, drift);
+      }
+    }
+    var td = '';
+    for (var n4 = 0; n4 < NS; n4++) {
+      var S4 = T.s[n4], XX = S4.x.slice(), YY = S4.y;
+      if (jag > 0) for (var jz = 1; jz <= JN; jz++) {
+        var q = jz / JN * 5.5 + n4 * 0.25 - J.wave * 0.3, zz = 1 - 4 * Math.abs(q - Math.round(q));
+        XX[jz] += jag * (2 + 3 * jz / JN) * zz;
+      }
+      td += ' M ' + XX[0].toFixed(1) + ' ' + YY[0].toFixed(1) + ' L ' + ((XX[0] + XX[1]) / 2).toFixed(1) + ' ' + ((YY[0] + YY[1]) / 2).toFixed(1);
+      for (var j5 = 1; j5 < JN; j5++) td += ' Q ' + XX[j5].toFixed(1) + ' ' + YY[j5].toFixed(1) + ' ' + ((XX[j5] + XX[j5 + 1]) / 2).toFixed(1) + ' ' + ((YY[j5] + YY[j5 + 1]) / 2).toFixed(1);
+      td += ' L ' + XX[JN].toFixed(1) + ' ' + YY[JN].toFixed(1);
+    }
+    R.tent.setAttribute('d', td.trim());
+    R.tent.style.strokeWidth = (2.2 + calm * 3.6).toFixed(1);
+  }
+
+  // ---------- one frame ----------
+  tick(t) {
+    var s = this.sim, el = this._els; if (!s || !el || !el.bellRef) return;
+    var dt = s.now ? Math.min(0.05, t - s.now) : 0.016; s.now = t;
+    var m = this.mic, st = this.state || {};
+    var calN = this.props.calBreaths ?? 4;
+    if (m) {
+      this.micFrame(t, dt);
+      if (m.mode === 'calibrating' && m.events.filter(function (x) { return x.label === 'ex'; }).length >= calN) this.micFinalize();
+    }
+    // the cues: running during calibration, and afterwards too if "Cues after" is on
+    this.cueVisible = !!(m && s.phase === 'swim' && (m.mode === 'calibrating' || st.keepCues !== false));
+    var cyc = 60 / this.cueBpm();
+    if (s.phase !== 'start') s.guide = (s.guide + dt / cyc) % 1;
+
+    // your jellyfish: the breath clock and bell from Swell, driven by what the mic hears
+    var lastPress = s.presses.length ? s.presses[s.presses.length - 1] : -100;
+    var myGap = s.rate ? 60 / s.rate : 12;
+    if (!s.holding && t - lastPress > 2 * myGap) s.steady *= Math.exp(-dt / 4);
+    s.steadyShown += (s.steady - s.steadyShown) * (1 - Math.exp(-dt / 1.2));
+    var eRest = 0.12, eMine = s.rate == null ? eRest : Math.min(1, Math.max(0, (s.rate - 4) / 6));
+    var e = eRest + (eMine - eRest) * s.steadyShown, vTop = 700;
+    var impulse = this.strokeImpulse(e);
+    var P = s.per = Math.max(60 / 14, s.rate ? 60 / s.rate : cyc);
+    if (s.kicks > 0) {
+      for (var kq = 0; kq < s.kicks; kq++) if (s.queue.length < 1) s.queue.push(impulse);
+      s.kicks = 0; s.resting = false;
+    }
+    if (s.inhaling) s.resting = false;
+    var owed = s.queue.length > 0, ph = s.ph || 0, inPowNow = ph >= 0.4 && ph < 0.62;
+    if (s.inhaling && !owed && (ph >= 0.62 || s.resting || s.relaxing)) { ph = 0; s.ph = 0; s.resting = false; s.relaxing = false; s.holdAt = null; }
+    var hearIn = s.inhaleAt != null && t - s.inhaleAt < 3 * P;
+    var inDur = m && m.prof && m.prof.in ? m.prof.in.dur : 0.33 * P;
+    var rate = 1 / P;
+    if (owed && !inPowNow) {
+      if (ph >= 0.33 && ph < 0.4) rate = Math.max(rate, (0.4 - ph) / 0.15);
+      else { s.pushFrom = s.c / (0.85 + 0.15 * Math.min(1, s.v / 750)); ph = 0.4; s.ph = 0.4; s.relaxing = false; }
+      s.holdAt = null;
+    } else if (s.resting) rate = 0;
+    else if (ph < 0.33) {
+      if (s.inhaling) rate = 0.33 / Math.max(0.6, inDur);
+      else if (hearIn) rate = Math.max(rate, (0.33 - ph) / 0.3);
+    } else if (ph < 0.4) {
+      if (s.holdAt == null) s.holdAt = t;
+      var waited = hearIn && s.inhaleEndAt && !s.inhaling ? t - Math.max(s.inhaleEndAt, s.holdAt) : t - s.holdAt;
+      rate = ph < 0.39 ? rate : 0;
+      if (!s.inhaling && waited > (hearIn ? 1.5 : 0.5 * P)) s.relaxing = true;
+    }
+    if (s.relaxing && !owed) {
+      s.ph = Math.max(0, ph - 0.4 * dt);
+      if (s.ph === 0) { s.relaxing = false; s.resting = true; s.holdAt = null; }
+    } else {
+      s.relaxing = false;
+      s.ph = ph + rate * dt;
+      if (s.inhaling && !owed && s.ph < 0.4) s.ph = Math.min(s.ph, 0.38);
+      if (!owed && ph < 0.4 && s.ph >= 0.39) s.ph = 0.39;
+      if (s.ph >= 1) { s.ph -= 1; s.holdAt = null; if (!owed && !s.inhaling && (hearIn || !s.rate)) { s.ph = 0; s.resting = true; } }
+    }
+    this.bellStep(s, dt, rate || 1 / P, function () { return s.queue.shift() || 0; }, e, t);
+    this.drawJelly(s, { bell: el.bellRef, inner: el.innerRef, gloss: el.glossRef, tent: el.tentRef }, t, e, vTop);
+    var A = 10 + 30 * e, Tr = 3 + 7 * e, wph = 2 * Math.PI * s.dist / 900;
+    el.swayRef.setAttribute('transform', 'translate(' + (A * Math.sin(wph)).toFixed(1) + ' 0) rotate(' + (Tr * Math.cos(wph)).toFixed(2) + ' 195 110)');
+    el.bodyRef.setAttribute('transform', 'translate(0 ' + this.bodyDip(s, vTop).toFixed(1) + ')');
+    // the halo shows what the mic is hearing right now: violet for an inhale, cyan for an exhale
+    var hearing = m && m.ev ? (m.ev.decided ? m.ev.label : '?') : null;
+    el.haloRef.style.fill = hearing === 'in' ? '#B9A7F0' : hearing === 'ex' ? '#8FD3E8' : hearing === 'x' ? '#6B7C88' : (this.props.bodyColor ?? '#8FD3E8');
+    el.haloRef.style.opacity = hearing ? '0.55' : '0.15';
+
+    // cues
+    var g = s.guide;
+    function win(a0, a1) { var fade = 0.04; return Math.max(0, Math.min(1, Math.min((g - a0) / fade + 1, (a1 - g) / fade + 1))); }
+    var cueOn = this.cueVisible;
+    el.cueInRef.style.opacity = cueOn ? Math.max(win(0, 0.4), g > 0.97 ? 1 : 0).toFixed(2) : '0';
+    el.cueOutRef.style.opacity = cueOn ? win(0.4, 0.65).toFixed(2) : '0';
+    el.cueRestRef.style.opacity = cueOn ? win(0.65, 0.97).toFixed(2) : '0';
+    var startTxt = !m ? (this.micErr || 'Turn on the mic to begin') : s.phase === 'start' ? 'Breathe in' : (!cueOn ? 'Breathe at your own pace' : '');
+    el.cueStartRef.style.opacity = startTxt ? '1' : '0';
+    if (startTxt && el.cueStartRef.textContent !== startTxt) el.cueStartRef.textContent = startTxt;
+    var sw = g < 0.4 ? 0.12 + 0.88 * (1 - Math.cos(Math.PI * g / 0.4)) / 2 : g < 0.65 ? 1 - 0.88 * (1 - Math.cos(Math.PI * (g - 0.4) / 0.25)) / 2 : 0.12;
+    el.swellRef.style.transform = 'scaleX(' + (cueOn ? sw : 0.12).toFixed(3) + ')';
+    el.swellRef.parentNode.style.opacity = cueOn ? '1' : '0.3';
+
+    // ---------- instruments ----------
+    var onT = this.micOnThreshold();
+    var cueLab = cueOn ? (g >= 0.97 || g < 0.4 ? 'in' : g < 0.65 ? 'ex' : 'glide') : null;
+    if (m && m.warm >= 1) {
+      s.trace.push({ t: t, rel: m.rel, thr: onT, cue: cueLab });
+      while (s.trace.length && s.trace[0].t < t - 32) s.trace.shift();
+    }
+    el.lvlRef.style.transform = 'scaleX(' + (m ? Math.max(0, Math.min(1, m.rel / 50)) : 0).toFixed(3) + ')';
+    el.lvlRef.style.background = hearing === 'in' ? '#B9A7F0' : hearing === 'ex' ? '#8FD3E8' : '#E8F1F2';
+    el.thrRef.style.left = (Math.min(1, onT / 50) * 100).toFixed(1) + '%';
+    var lt = m ? m.rel.toFixed(1) + ' dB' : '-- dB';
+    if (el.lvlTxtRef.textContent !== lt) el.lvlTxtRef.textContent = lt;
+    var stt = this.labStatus();
+    if (el.statusRef.textContent !== stt) el.statusRef.textContent = stt;
+    s.drawAcc = (s.drawAcc || 0) + dt;
+    if (s.drawAcc >= 1 / 30) { s.drawAcc = 0; this.drawTimeline(t); this.drawFeatures(); this.drawTable(); }
+  }
+  labStatus() {
+    var m = this.mic; if (!m) return this.micErr || 'Microphone off';
+    var lag = Math.round(m.lag * 1000) + ' ms lag' + (m.inLat == null ? ' (est.)' : '');
+    if (m.warm == null || m.warm < 1) return 'Listening to the room…';
+    var calN = this.props.calBreaths ?? 4;
+    if (m.mode === 'calibrating') {
+      var ne = m.events.filter(function (x) { return x.label === 'ex'; }).length, ni = m.events.filter(function (x) { return x.label === 'in'; }).length;
+      return 'Calibrating · breathe with the cue · exhales ' + ne + ' / ' + calN + ' · inhales ' + ni + '\n' + lag;
+    }
+    if (m.mode === 'both') {
+      var Pe = m.prof.ex, Pi = m.prof.in;
+      return 'Inhales + exhales' + (m.byCue ? ' (labelled by cue: they sound alike)' : '') + ' · ' + lag +
+        '\nex ' + Pe.mu[0].toFixed(1) + ' dB · ' + Math.round(Math.pow(2, Pe.mu[1])) + ' Hz   in ' + Pi.mu[0].toFixed(1) + ' dB · ' + Math.round(Math.pow(2, Pi.mu[1])) + ' Hz';
+    }
+    var nx = m.events.filter(function (x) { return x.label === 'x'; }).length;
+    return 'Exhales only' + (m.guard != null ? ' · guard ' + m.guard.toFixed(1) + ' dB' : '') + (nx ? ' · ' + nx + ' ignored' : '') + (m.warn ? ' (' + m.warn + ')' : '') + ' · ' + lag +
+      '\nex ' + m.prof.ex.mu[0].toFixed(1) + ' dB · ' + Math.round(Math.pow(2, m.prof.ex.mu[1])) + ' Hz · inhales between exhales ' + Math.round((m.alt || 0) * 100) + '%';
+  }
+  // last 30 s: the level above the room's floor, the threshold, each detected sound as a band coloured by its label
+  // (thin top edge = the live label, if it changed), and the cue that was on screen along the bottom
+  drawTimeline(t) {
+    var cv = this._els.tlRef; if (!cv) return;
+    var cx = cv.getContext('2d'), W = cv.width, H = cv.height, k = 2, span = 30, s = this.sim, m = this.mic;
+    cx.clearRect(0, 0, W, H);
+    var top = 8 * k, bot = H - 16 * k, cueY = H - 10 * k;
+    function X(tt) { return W * (1 - (t - tt) / span); }
+    function Y(db) { return bot - (bot - top) * Math.max(0, Math.min(1, db / 50)); }
+    var COL = { in: '#B9A7F0', ex: '#8FD3E8', x: '#6B7C88', glide: '#3A4B57' };
+    // seconds grid
+    cx.strokeStyle = 'rgba(232,241,242,0.06)'; cx.lineWidth = 1;
+    for (var sg = Math.ceil(t - span); sg <= t; sg++) if (sg % 5 === 0) { cx.beginPath(); cx.moveTo(X(sg), top); cx.lineTo(X(sg), bot); cx.stroke(); }
+    // cue strip
+    var tr = s.trace;
+    for (var i = 1; i < tr.length; i++) {
+      if (!tr[i].cue) continue;
+      cx.fillStyle = tr[i].cue === 'in' ? 'rgba(185,167,240,0.55)' : tr[i].cue === 'ex' ? 'rgba(143,211,232,0.55)' : 'rgba(58,75,87,0.6)';
+      cx.fillRect(X(tr[i - 1].t), cueY, X(tr[i].t) - X(tr[i - 1].t) + 0.5, 7 * k);
+    }
+    // detected sounds
+    if (m) m.log.forEach(function (r) {
+      var x0 = X(r.t0), x1 = X(r.t0 + r.dur); if (x1 < 0) return;
+      cx.fillStyle = COL[r.label] || '#E8F1F2';
+      cx.globalAlpha = r.cont ? 0.12 : r.short ? 0.1 : 0.22; cx.fillRect(x0, top, x1 - x0, bot - top);
+      cx.globalAlpha = 1; cx.fillRect(x0, top, Math.max(2, x1 - x0), 3 * k);
+      if (r.live && r.live !== r.label) { cx.fillStyle = COL[r.live]; cx.fillRect(x0, top + 3 * k, Math.max(2, x1 - x0), 2 * k); }
+      cx.fillStyle = '#E8F1F2'; cx.font = (9 * k) + 'px IBM Plex Mono, monospace';
+      if (!r.cont && x1 - x0 > 14 * k) cx.fillText(r.label === 'in' ? 'in' : r.label === 'ex' ? 'ex' : r.label, x0 + 3 * k, top + 13 * k);
+    });
+    if (m && m.ev) { var xe = X(m.ev.t0); cx.fillStyle = 'rgba(232,241,242,0.12)'; cx.fillRect(xe, top, W - xe, bot - top); }
+    // threshold and level
+    cx.strokeStyle = '#F4A259'; cx.lineWidth = 1.5 * k / 2; cx.beginPath();
+    tr.forEach(function (p2, j) { var xx = X(p2.t), yy = Y(p2.thr); if (j) cx.lineTo(xx, yy); else cx.moveTo(xx, yy); }); cx.stroke();
+    cx.strokeStyle = '#E8F1F2'; cx.lineWidth = 1.2 * k; cx.beginPath();
+    tr.forEach(function (p2, j) { var xx = X(p2.t), yy = Y(p2.rel); if (j) cx.lineTo(xx, yy); else cx.moveTo(xx, yy); }); cx.stroke();
+    cx.fillStyle = '#6B7C88'; cx.font = (9 * k) + 'px IBM Plex Mono, monospace';
+    cx.fillText('50 dB', 4 * k, top + 8 * k); cx.fillText('-30 s', 4 * k, bot - 3 * k); cx.fillText('now', W - 22 * k, bot - 3 * k);
+  }
+  // every sound by its two features: level (dB above the room) across, brightness (spectral centroid) up
+  drawFeatures() {
+    var cv = this._els.fpRef; if (!cv) return;
+    var cx = cv.getContext('2d'), W = cv.width, H = cv.height, k = 2, m = this.mic;
+    cx.clearRect(0, 0, W, H);
+    var L = 16 * k, R = W - 6 * k, Tp = 6 * k, B = H - 16 * k;
+    function X(db) { return L + (R - L) * Math.max(0, Math.min(1, db / 50)); }
+    function Y(l2) { return B - (B - Tp) * Math.max(0, Math.min(1, (l2 - 7) / 5)); }   // 128 Hz .. 4 kHz
+    cx.strokeStyle = 'rgba(232,241,242,0.15)'; cx.lineWidth = 1; cx.strokeRect(L, Tp, R - L, B - Tp);
+    cx.fillStyle = '#6B7C88'; cx.font = (8 * k) + 'px IBM Plex Mono, monospace';
+    cx.fillText('level →', L + 2 * k, H - 4 * k); cx.save(); cx.translate(10 * k, B - 2 * k); cx.rotate(-Math.PI / 2); cx.fillText('bright →', 0, 0); cx.restore();
+    if (!m) return;
+    var COL = { in: '#B9A7F0', ex: '#8FD3E8', x: '#6B7C88' };
+    if (m.prof) Object.keys(m.prof).forEach(function (kk) {
+      var Pp = m.prof[kk]; cx.strokeStyle = COL[kk]; cx.globalAlpha = 0.6; cx.lineWidth = 1.5;
+      cx.beginPath(); cx.ellipse(X(Pp.mu[0]), Y(Pp.mu[1]), Math.abs(X(Pp.mu[0] + Pp.sd[0]) - X(Pp.mu[0])), Math.abs(Y(Pp.mu[1] + Pp.sd[1]) - Y(Pp.mu[1])), 0, 0, 2 * Math.PI); cx.stroke();
+      cx.globalAlpha = 1;
+    });
+    m.log.forEach(function (r) {
+      if (!r.f || r.cont) return;
+      var x = X(r.f[0]), y = Y(r.f[1]);
+      cx.fillStyle = COL[r.label] || '#E8F1F2'; cx.globalAlpha = r.short ? 0.35 : 0.9;
+      cx.beginPath(); cx.arc(x, y, 3.2 * k, 0, 2 * Math.PI); cx.fill(); cx.globalAlpha = 1;
+      if (r.cue) { cx.strokeStyle = r.cue === 'in' ? '#B9A7F0' : '#8FD3E8'; cx.lineWidth = 1.2 * k; cx.beginPath(); cx.arc(x, y, 5.6 * k, 0, 2 * Math.PI); cx.stroke(); }
+    });
+  }
+  // recent sounds, newest first: when, how long, level, brightness, the cue it began under, the live label and the
+  // label it holds now (calibration's re-sort can change it)
+  drawTable() {
+    var el = this._els.tableRef; if (!el) return;
+    var m = this.mic, s = this.sim;
+    if (!m || !m.log.length) { if (el.textContent !== 'No sounds yet') el.textContent = 'No sounds yet'; return; }
+    var t0 = s.t0 || m.log[0].t0;
+    var rows = ['   t   dur  lvl   Hz  cue  label'];
+    m.log.slice(-9).reverse().forEach(function (r) {
+      var lab = r.cont ? '+ cont' : r.live && r.live !== r.label ? r.live + '→' + r.label : r.label;
+      if (r.short && !r.cont) lab += ' (short)';
+      var hz = r.f ? Math.round(Math.pow(2, r.f[1])) : 0;
+      rows.push(((r.t0 - t0).toFixed(1)).padStart(5) + ' ' + r.dur.toFixed(1).padStart(4) + ' ' + (r.f ? r.f[0].toFixed(0) : '-').padStart(4) + ' ' + String(hz).padStart(4) + '  ' + (r.core ? r.core.toUpperCase() : r.cue || ' - ').padEnd(3) + '  ' + lab);
+    });
+    var txt = rows.join('\n');
+    if (el.textContent !== txt) el.textContent = txt;
+  }
+
+  renderVals() {
+    this.init();
+    var self = this, st = this.state || {};
+    var bodyColor = this.props.bodyColor ?? '#8FD3E8';
+    var vals = {};
+    ['swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'cueStartRef', 'swellRef',
+      'statusRef', 'lvlRef', 'thrRef', 'lvlTxtRef', 'tlRef', 'fpRef', 'tableRef'].forEach(function (nm) { vals[nm] = self.ref(nm); });
+    return Object.assign(vals, {
+      bodyColor: bodyColor,
+      bpm: this.cueBpm(),
+      bpmLabel: this.cueBpm() + ' / min',
+      onBpm: function (ev) { self.setState({ bpm: Number(ev.target.value) }); },
+      keepCues: st.keepCues !== false,
+      onKeepCues: function (ev) { self.setState({ keepCues: ev.target.checked }); },
+      micLabel: st.mic ? 'Stop mic' : 'Start mic',
+      micBtnRing: st.mic ? bodyColor : 'rgba(232,241,242,0.25)',
+      micBtnFill: st.mic ? 'rgba(143,211,232,0.18)' : 'transparent',
+      onMicToggle: function () { self.setMic(!st.mic); },
+      onRecalibrate: function () { self.recalibrate(); }
+    });
+  }
+}
+
+</script>
+</body>
+</html>

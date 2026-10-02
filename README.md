@@ -16,12 +16,18 @@ Open `prototype.html` in a browser. It's the same app plus the test controls: gu
 - **Sync** with the guide drives the glow, color variety and guidance fading.
 - **Sound (headphones)** turns on the tuned binaural bed, fish tones and breath noise. Browsers only allow audio after a tap.
 
+## Breath lab
+
+`breath-lab.html` is a test bench for breath identification: your jellyfish and the microphone pipeline, with no environment, guides or sound. It shows the level against the threshold, each detected sound against the cue on screen, a table of recent sounds (level, brightness, cue, live and final label), and the sounds plotted by their features. Like the live page, the microphone needs https.
+
 ## Repository
 
 | Path | What it is |
 | --- | --- |
 | `index.html` | Live page (just the app) |
 | `prototype.html` | Prototype with test controls |
+| `breath-lab.html` | Breath identification test bench |
+| `design/BreathLab.dc.html` | Design-canvas source of the breath lab |
 | `docs/tentacle-motion.md` | Tentacle movement principles |
 | `docs/spec.md` | Snapshot of the product spec |
 | `design/Swim.dc.html` | Design-canvas source of the prototype |
