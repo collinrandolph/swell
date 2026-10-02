@@ -835,21 +835,11 @@ class Component extends DCLogic {
     J.dist += J.v * dt;
     J.c = (0.85 + 0.15 * Math.min(1, J.v / 750)) * this.bellPulse(J.ph);
     J.wave += dt * 2 * Math.PI / (2.6 - 1.2 * e);
-    J.swPh = ((J.swPh || 0) + dt * 2 * Math.PI / Math.max(3, Math.min(20, J.per || 10))) % (2 * Math.PI);
     if (t != null) {
-      this.smoothC(J, dt);
-      J.hist.push({ t: t, c: J.c, cs: J.cs2, v: J.v });
-      while (J.hist.length > 2 && J.hist[1].t < t - 21) J.hist.shift();
+      J.hist.push({ t: t, c: J.c, v: J.v });
+      while (J.hist.length > 2 && J.hist[1].t < t - 3) J.hist.shift();
     }
     return dJ;
-  }
-
-  // two-stage low-pass of the bell state (time constant a tenth of the breath): the tentacle wave carries this,
-  // so the quick push spreads into one broad arch along the strand
-  smoothC(J, dt) {
-    var ts = Math.max(0.3, (J.per || 10) / 10), k = 1 - Math.exp(-dt / ts);
-    if (J.cs1 == null) { J.cs1 = J.c; J.cs2 = J.c; }
-    J.cs1 += (J.c - J.cs1) * k; J.cs2 += (J.cs1 - J.cs2) * k;
   }
 
   drawJelly(J, R, t, e, vTop) {
@@ -860,7 +850,7 @@ class Component extends DCLogic {
     var depth = 2 + 14 * e, belly = calm * 16, vig = 0.75 + 0.5 * e;
     var hist = J.hist;
     function at(tq) {                                   // latest sample at or before tq (binary search)
-      if (!hist.length) return { t: t, c: J.c, cs: J.c, v: 0 };
+      if (!hist.length) return { t: t, c: J.c, v: 0 };
       if (hist[0].t > tq) return hist[0];
       var lo = 0, hi = hist.length - 1;
       while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (hist[mid].t <= tq) lo = mid; else hi = mid - 1; }
@@ -877,10 +867,6 @@ class Component extends DCLogic {
       var sh = shape(c, c), ph = Math.atan2(3 * sh.fl, sh.ry + 1.2 * sh.fl);
       return ph >= 0 ? ph : 0.6 * ph;
     }
-    // One S per strand: the strand shows one whole breath of the root's (smoothed) history, so the wave
-    // takes one breath period to travel root to tip and every moment of the breath reads as a single S.
-    var WAVE_T = Math.max(3, Math.min(20, J.per || 10)), phiRest = phiOf(0.8);
-
     // bell (its rim trails the dome slightly: overlap)
     var b = shape(J.c, at(t - 0.08).c);
     var d = '', N = 72, M = 64;
@@ -904,83 +890,84 @@ class Component extends DCLogic {
     R.gloss.setAttribute('cy', (cy - b.ry * 0.62).toFixed(1));
     R.gloss.style.opacity = (0.62 * Math.pow(calm, 1.5)).toFixed(2);
 
-    // tentacles: successive breaking of joints. A plain forward-kinematic chain carries everything below a joint
-    // with it the instant that joint moves, so the tip sweeps before the bend reaches it (reads as a C lever).
-    // Here a point a fraction f down the strand reads EVERYTHING (root position, rim spread, rim angle, speed) from
-    // the moment WAVE_T*f seconds ago, so nothing below a point moves until the motion has travelled down to it.
-    // The rim angle travels as a sideways offset (follow the leader): the push tucks the top in while the flare's
-    // outward offset is still on its way down, giving the S, whose arches lengthen as they travel. Near the root the
-    // offset ramps in so the strand leaves the bell tangent to the rim margin; a small static curl (the glide angle)
-    // is chained on at the root. Amplitude grows a little toward the tip and eases as the wave ages.
-    var JN = 24, count = 8, base = 165 + calm * 14, ampBase = 5 + calm * 3 + e * 4;
-    var jag = Math.max(0, (e - 0.5) / 0.5), minGap = (2.2 + calm * 3.6) + 2.5;
-    var xs = [], ys = [], hooks = [], hooksY = [], chAng = 0, chX = 0, chY = 0;
-    for (var n = 0; n < count; n++) {
-      var rf = -1 + 2 * n / (count - 1);
-      // Centre strands vs rim strands (same root spread, so the overall width is unchanged). wc = 1 for the
-      // middle pair, ~0.75 for the next pair out, ~0 at the rim. Centre strands are ribbon-like: a little longer,
-      // with a slower wave, slow, broad, low kinks and almost no rim drive. Rim strands carry the full wave.
-      var wo = Math.max(0, Math.min(1, (Math.abs(rf) - 0.15) / 0.6)); wo = wo * wo * (3 - 2 * wo);
-      var wc = 1 - wo, tauN = WAVE_T;
-      var len = (base + (n % 2) * 14) * (1 + 0.1 * wc), drive = rf * (0.2 + 0.8 * wo), K = len / 3.2, ampS = (11 + 4 * calm + 3 * e) * (0.6 + 0.4 * wo);
-      xs.push([]); ys.push([]); hooks.push([]); hooksY.push([]);
-      for (var j2 = 0; j2 <= JN; j2++) {
-        var f = j2 / JN, tau = tauN * f;
-        var hd = at(t - tau), hv = at(t - 0.7 * f), sp = Math.min(1, hv.v / vTop);
-        // just under the rim the strand follows the bell exactly; further down it carries the smoothed breath,
-        // so the wave is one broad S rather than a tight kink from the quick push
-        var cm = lerp(hd.c, hd.cs == null ? hd.c : hd.cs, Math.min(1, f / 0.2)), sh = shape(cm, cm);
-        var rootX = cx + rf * sh.half * 0.9, rootY = sh.rimY + 4 + calm * 6;
-        // the resting S: every strand always holds exactly one S (one wavelength over its length), travelling root
-        // to tip once per breath, so even at rest no strand hangs as a straight line. It ramps in under the rim so
-        // the root stays tangent to the bell. Neighbours are slightly out of phase; centre strands are gentler.
-        var Gs = Math.sin(Math.PI / 2 * Math.min(1, f / 0.25)) * (0.7 + 0.5 * f);
-        var und = ampS * (1 - 0.3 * sp) * Gs * Math.sin(2 * Math.PI * f - (J.swPh || 0) + n * 0.5);
-        if (jag > 0) {                                     // high energy only: the jagged edge
-          var q = f * 5.5 + n * 0.25 - J.wave * 0.3, zz = 1 - 4 * Math.abs(q - Math.round(q));
-          und += jag * ampBase * 0.6 * (0.25 + f) * zz;
-        }
-        var drag = rf * vig * (3 - 18 * sp) * f;          // strands stream together at speed
-        // the travelling offset
-        var G = Math.sin(Math.PI / 2 * Math.min(1, f / 0.3)) * (1 + 0.4 * f * f);
-        var wx = drive * K * (phiOf(cm) - phiRest) * G * Math.exp(-0.5 * f);
-        // the static glide curl at the root
-        if (j2 === 0) { chAng = 0; chX = 0; chY = 0; }
-        else {
-          chAng = drive * phiRest * Math.max(0, 1 - ((j2 - 0.5) / JN) / 0.18);
-          chX += (len / JN) * Math.sin(chAng); chY += (len / JN) * (Math.cos(chAng) - 1);
-        }
-        var lenK = 1 + 0.06 * sp - 0.06 * Math.max(0, -hv.c);
-        xs[n].push(rootX + drag + und);
-        hooks[n].push(chX + wx); hooksY[n].push(chY);
-        ys[n].push(rootY + f * len * lenK);
+    // ---------- tentacles: simulated strands in water (principles in docs/tentacle-motion.md) ----------
+    // Each strand is a chain of short fixed-length links that remembers where it was. The rim drives only the root
+    // section (its position, and its angle tangent to the bell margin); water resists every other link's movement
+    // relative to the surrounding flow, which carries the body's own speed through the water and a slow drift.
+    // Nothing is shaped by hand: the S-curves, the travel from root to tip, the trailing and the follow-through
+    // all come out of the strand being pulled through thick water.
+    var GAIN = 1.4, DRAG = 2.6, FLOW0 = 12, KB = 0.03, KJ = 0.2;
+    var NS = 8, JN = 24, KR = 2, jag = Math.max(0, (e - 0.5) / 0.5);
+    var bNow = shape(J.c, J.c), rootAng = phiOf(J.c);
+    var T = J.tent;
+    function rootOf(n) {
+      var rf = -1 + 2 * n / (NS - 1);
+      return { rf: rf, x: cx + rf * bNow.half * 0.9, y: bNow.rimY + 4 + calm * 6, a: rf * (0.35 + 0.65 * Math.abs(rf)) * rootAng * GAIN };
+    }
+    if (!T) {
+      T = J.tent = { t: t, dip: null, s: [] };
+      for (var n0 = 0; n0 < NS; n0++) {
+        var r0 = rootOf(n0), L0 = (165 + calm * 14 + (n0 % 2) * 14) * (1 + 0.06 * (1 - Math.abs(r0.rf))), st = { L: L0 / JN, x: [], y: [], px: [], py: [] };
+        for (var j0 = 0; j0 <= JN; j0++) { st.x.push(r0.x); st.y.push(r0.y + j0 * st.L); st.px.push(r0.x); st.py.push(r0.y + j0 * st.L); }
+        T.s.push(st);
       }
     }
-    var passes = Math.round(3 * (1 - jag));
-    var hooksAfter = true;
-    for (var n2 = 0; n2 < count; n2++) for (var pz = 0, pzN = passes + (Math.abs(n2 - (count - 1) / 2) < 1.6 ? 2 : 0); pz < pzN; pz++) {
-      var src = xs[n2].slice();
-      for (var j3 = 1; j3 < JN; j3++) xs[n2][j3] = 0.25 * src[j3 - 1] + 0.5 * src[j3] + 0.25 * src[j3 + 1];
-    }
-    for (var ns = 0; ns < count; ns++) for (var ps = 0; ps < 2; ps++) {         // soften the travelling kinks a touch
-      var hs = hooks[ns].slice();
-      for (var js = 2; js < JN; js++) hooks[ns][js] = 0.25 * hs[js - 1] + 0.5 * hs[js] + 0.25 * hs[js + 1];
-    }
-    for (var nh = 0; nh < count; nh++) for (var jh = 0; jh <= JN; jh++) { xs[nh][jh] += hooks[nh][jh]; ys[nh][jh] += hooksY[nh][jh]; }   // the C-curve stays crisp
-    var KEEP_APART = false;                           // overlap rule off while the motion is being modelled
-    if (KEEP_APART) for (var j4 = 0; j4 <= JN; j4++) {
-      var raw = [], L = [], Rr = [];
-      for (var n3 = 0; n3 < count; n3++) raw.push(xs[n3][j4]);
-      for (var a1 = 0; a1 < count; a1++) L[a1] = a1 === 0 ? raw[0] : Math.max(raw[a1], L[a1 - 1] + minGap);
-      for (var b1 = count - 1; b1 >= 0; b1--) Rr[b1] = b1 === count - 1 ? raw[b1] : Math.min(raw[b1], Rr[b1 + 1] - minGap);
-      for (var c1 = 0; c1 < count; c1++) xs[c1][j4] = (L[c1] + Rr[c1]) / 2;
+    var fdt = Math.min(0.05, Math.max(0, t - T.t)); T.t = t;
+    if (!J.noStep && fdt > 0) {
+      // the body's lunge and sink move the strands' anchor, not the water: free links stay where they were
+      var dip = J.ph != null ? this.bodyDip(J, vTop) : 0, dd = T.dip == null ? 0 : dip - T.dip; T.dip = dip;
+      var flowY = FLOW0 + 0.32 * (J.v || 0);                   // water streaming past as the body swims up (+ a slight sink)
+      var drift = (11 + 7 * calm) * (1 - 0.6 * Math.min(1, (J.v || 0) / vTop));
+      var sub = Math.ceil(fdt / (1 / 120)), h = fdt / sub;
+      for (var n1 = 0; n1 < NS; n1++) {
+        var S1 = T.s[n1], X = S1.x, Y = S1.y, PX = S1.px, PY = S1.py, rt = rootOf(n1);
+        for (var jd = KR + 1; jd <= JN; jd++) { Y[jd] -= dd; PY[jd] -= dd; }
+        for (var sb = 0; sb < sub; sb++) {
+          var ts = t - fdt + (sb + 1) * h;
+          // root section: pinned to the rim, along the margin's tangent
+          for (var jr = 0; jr <= KR; jr++) {
+            X[jr] = rt.x + Math.sin(rt.a) * S1.L * jr; Y[jr] = rt.y + Math.cos(rt.a) * S1.L * jr;
+            PX[jr] = X[jr]; PY[jr] = Y[jr];
+          }
+          // free links: carried by inertia, resisted by water moving at the local flow
+          for (var jf = KR + 1; jf <= JN; jf++) {
+            var vx = (X[jf] - PX[jf]) / h, vy = (Y[jf] - PY[jf]) / h;
+            var dy = Y[jf] - rt.y, fx = drift * Math.sin(2 * Math.PI * dy / (S1.L * JN) - 2 * Math.PI * ts / 3.6 + n1 * 0.3);
+            PX[jf] = X[jf]; PY[jf] = Y[jf];
+            X[jf] += vx * h + DRAG * (fx - vx) * h * h;
+            Y[jf] += vy * h + DRAG * (flowY - vy) * h * h;
+          }
+          // fixed link lengths, solved from the root down (each link follows its parent)
+          for (var jl = KR + 1; jl <= JN; jl++) {
+            var ex = X[jl] - X[jl - 1], ey = Y[jl] - Y[jl - 1], dl = Math.sqrt(ex * ex + ey * ey) || 1;
+            X[jl] = X[jl - 1] + ex / dl * S1.L; Y[jl] = Y[jl - 1] + ey / dl * S1.L;
+          }
+          // slight stiffness keeps the curves smooth: firmer near the root, softer toward the tip
+          for (var jb = KR; jb < JN; jb++) {
+            if (jb === KR) {                                   // the joint: the free strand continues the root's line
+              var tx = 2 * X[KR] - X[KR - 1], ty = 2 * Y[KR] - Y[KR - 1];
+              X[KR + 1] += (tx - X[KR + 1]) * KJ; Y[KR + 1] += (ty - Y[KR + 1]) * KJ; continue;
+            }
+            var kb = KB * (1 - (jb - KR) / (JN - KR)) + 0.003 + 0.14 * Math.exp(-(jb - KR) / 2);
+            X[jb] += ((X[jb - 1] + X[jb + 1]) / 2 - X[jb]) * kb; Y[jb] += ((Y[jb - 1] + Y[jb + 1]) / 2 - Y[jb]) * kb;
+          }
+          for (var jl2 = KR + 1; jl2 <= JN; jl2++) {
+            var ex2 = X[jl2] - X[jl2 - 1], ey2 = Y[jl2] - Y[jl2 - 1], dl2 = Math.sqrt(ex2 * ex2 + ey2 * ey2) || 1;
+            X[jl2] = X[jl2 - 1] + ex2 / dl2 * S1.L; Y[jl2] = Y[jl2 - 1] + ey2 / dl2 * S1.L;
+          }
+        }
+      }
     }
     var td = '';
-    for (var n4 = 0; n4 < count; n4++) {
-      var X = xs[n4], Y = ys[n4];
-      td += ' M ' + X[0].toFixed(1) + ' ' + Y[0].toFixed(1) + ' L ' + ((X[0] + X[1]) / 2).toFixed(1) + ' ' + ((Y[0] + Y[1]) / 2).toFixed(1);
-      for (var j5 = 1; j5 < JN; j5++) td += ' Q ' + X[j5].toFixed(1) + ' ' + Y[j5].toFixed(1) + ' ' + ((X[j5] + X[j5 + 1]) / 2).toFixed(1) + ' ' + ((Y[j5] + Y[j5 + 1]) / 2).toFixed(1);
-      td += ' L ' + X[JN].toFixed(1) + ' ' + Y[JN].toFixed(1);
+    for (var n4 = 0; n4 < NS; n4++) {
+      var S4 = T.s[n4], XX = S4.x.slice(), YY = S4.y;
+      if (jag > 0) for (var jz = 1; jz <= JN; jz++) {                 // high energy only: the jagged edge
+        var q = jz / JN * 5.5 + n4 * 0.25 - J.wave * 0.3, zz = 1 - 4 * Math.abs(q - Math.round(q));
+        XX[jz] += jag * (2 + 3 * jz / JN) * zz;
+      }
+      td += ' M ' + XX[0].toFixed(1) + ' ' + YY[0].toFixed(1) + ' L ' + ((XX[0] + XX[1]) / 2).toFixed(1) + ' ' + ((YY[0] + YY[1]) / 2).toFixed(1);
+      for (var j5 = 1; j5 < JN; j5++) td += ' Q ' + XX[j5].toFixed(1) + ' ' + YY[j5].toFixed(1) + ' ' + ((XX[j5] + XX[j5 + 1]) / 2).toFixed(1) + ' ' + ((YY[j5] + YY[j5 + 1]) / 2).toFixed(1);
+      td += ' L ' + XX[JN].toFixed(1) + ' ' + YY[JN].toFixed(1);
     }
     R.tent.setAttribute('d', td.trim());
     R.tent.style.strokeWidth = (2.2 + calm * 3.6).toFixed(1);
@@ -1147,7 +1134,7 @@ class Component extends DCLogic {
     el.hSwayRef.style.display = pair && ga.w > 0.001 ? '' : 'none';
     if (pair && ga.w > 0.001) {
       // the partner moves in exact sync: same stroke, same tentacle wave, same sway (only colour and tone differ)
-      this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave, per: G.per, swPh: G.swPh }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
+      this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave, per: G.per, tent: G.tent, noStep: true, v: G.v, ph: G.ph }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
       var gw2 = gw;                                   // moves in exact lockstep with its partner
       el.hSwayRef.setAttribute('transform', 'translate(' + (offX + bDx + gA * Math.sin(gw2)).toFixed(1) + ' ' + (bDy - G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw2)).toFixed(2) + ' ' + (305 + offX + bDx).toFixed(1) + ' ' + (360 + bDy).toFixed(1) + ')');
       el.hBodyRef.setAttribute('transform', 'translate(0 ' + gDip.toFixed(1) + ')');
