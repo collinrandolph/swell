@@ -606,16 +606,25 @@ class Component extends DCLogic {
       }
     }
     else {
-      // calibrating: the first breath is an exhale ("Breathe out to rise"); later events that are clearly quieter
-      // or brighter than the exhales so far are inhale candidates
-      ev.cue = this.micCueAt(ev.t0);
-      if (!m.anchor) { m.anchor = ev.f.slice(); label = 'ex'; }
-      else if (ev.cue) label = m.lastLabel === ev.cue ? (ev.cue === 'in' ? 'ex' : 'in') : ev.cue;   // the cue labels it, but breaths alternate (your rhythm may drift from the cue)
+      // calibrating: the session opens on "Breathe in" and waits for a sound. That first sound is an inhale, and the
+      // cues start from it (not from a timer), so the first cue lines up with your actual breath.
+      var sS = this.sim;
+      if (sS && sS.phase === 'start') {
+        var cycS = 60 / this.guideBpm(), nowS = performance.now() / 1000;
+        sS.phase = 'swim'; sS.guide = (Math.max(0, nowS - ev.t0) / cycS) % 1;     // the inhale cue began when the sound did
+        m.anchorIn = ev.f.slice(); ev.cue = 'in'; label = 'in';
+      }
+      else if ((ev.cue = this.micCueAt(ev.t0))) label = m.lastLabel === ev.cue ? (ev.cue === 'in' ? 'ex' : 'in') : ev.cue;   // the cue labels it, but breaths alternate (your rhythm may drift from the cue)
       else {
-        var exs = m.events.filter(function (x) { return x.label === 'ex'; }).map(function (x) { return x.f; }).concat([m.anchor]);
-        var r0 = 0, r1 = 0; exs.forEach(function (x) { r0 += x[0]; r1 += x[1]; }); r0 /= exs.length; r1 /= exs.length;
-        // both cues must agree (quieter AND brighter), and two inhales never come in a row
-        label = (m.lastLabel !== 'in' && ev.f[0] < r0 - 4 && ev.f[1] > r1 + 0.25) ? 'in' : 'ex';
+        // no cue to go on (the edges between cues): judge by sound against the exhales heard so far, and keep
+        // breaths alternating; with no exhale heard yet, the breath after an inhale is an exhale
+        var exs = m.events.filter(function (x) { return x.label === 'ex'; }).map(function (x) { return x.f; });
+        if (!exs.length) label = m.lastLabel === 'in' ? 'ex' : 'in';
+        else {
+          var r0 = 0, r1 = 0; exs.forEach(function (x) { r0 += x[0]; r1 += x[1]; }); r0 /= exs.length; r1 /= exs.length;
+          // both must agree (quieter AND brighter), and two inhales never come in a row
+          label = (m.lastLabel !== 'in' && ev.f[0] < r0 - 4 && ev.f[1] > r1 + 0.25) ? 'in' : 'ex';
+        }
       }
     }
     ev.label = label; ev.live = label;
@@ -658,9 +667,14 @@ class Component extends DCLogic {
     var ex = evs.filter(function (x) { return x.label === 'ex'; }), inn = evs.filter(function (x) { return x.label === 'in'; });
     // timing cue: if the features found no inhales but the events come in short-long pairs, both are audible and alike
     var cIn = evs.filter(function (x) { return x.cue === 'in'; }).length, cEx = evs.filter(function (x) { return x.cue === 'ex'; }).length;
-    if (inn.length < 2 && cIn >= 2 && cEx >= 2) {
-      // the sounds don't separate by ear, but some kept arriving under the "Breathe in" cue: inhales are audible
-      // and sound like exhales, so keep the labels given live (the cue, kept alternating)
+    // how well the sound-based groups agree with the labels given live (the cue, kept alternating), and how cleanly
+    // those live labels alternate
+    var agree = evs.filter(function (x) { return x.label === (x.live || x.label); }).length / Math.max(1, evs.length), liveAlt = 0;
+    for (var la = 1; la < evs.length; la++) if ((evs[la].live || evs[la].label) !== (evs[la - 1].live || evs[la - 1].label)) liveAlt++;
+    liveAlt = evs.length > 1 ? liveAlt / (evs.length - 1) : 0;
+    if ((inn.length < 2 || agree < 0.7) && liveAlt >= 0.8 && cIn >= 2 && cEx >= 2) {
+      // the sounds don't separate by ear (no groups, or groups that contradict the cues): inhales are audible but
+      // sound like exhales, so keep the labels given live (the cue, kept alternating)
       evs.forEach(function (x) { x.label = x.live || x.label; });
       ex = evs.filter(function (x) { return x.label === 'ex'; }); inn = evs.filter(function (x) { return x.label === 'in'; });
     } else if (inn.length < 2 && evs.length >= 6) {
@@ -1428,7 +1442,11 @@ class Component extends DCLogic {
     // start: only the invitation to rise; end: the arrival line. The breathing cues step aside for both.
     var atStart = s.phase === 'start', atEnd = s.phase === 'float' || s.phase === 'breach';
     if (atStart || atEnd) { el.cueInRef.style.opacity = '0'; el.cueOutRef.style.opacity = '0'; el.cueRestRef.style.opacity = '0'; }
-    if (el.cueStartRef) el.cueStartRef.style.opacity = atStart ? '1' : '0';
+    if (el.cueStartRef) {
+      el.cueStartRef.style.opacity = atStart ? '1' : '0';
+      var startTxt = this.mic && this.mic.mode === 'calibrating' ? 'Breathe in' : 'Breathe out to rise';
+      if (atStart && el.cueStartRef.textContent !== startTxt) el.cueStartRef.textContent = startTxt;
+    }
     if (el.cueEndRef) el.cueEndRef.style.opacity = s.phase === 'float' ? '1' : '0';
     if (el.guideCueRef && (atStart || atEnd)) el.guideCueRef.style.opacity = '1';
     var sw;
