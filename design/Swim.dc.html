@@ -766,6 +766,7 @@ class Component extends DCLogic {
     J.dist += J.v * dt;
     J.c = (0.85 + 0.15 * Math.min(1, J.v / 750)) * this.bellPulse(J.ph);
     J.wave += dt * 2 * Math.PI / (2.6 - 1.2 * e);
+    J.swPh = ((J.swPh || 0) + dt * 2 * Math.PI / Math.max(3, Math.min(20, J.per || 10))) % (2 * Math.PI);
     if (t != null) {
       this.smoothC(J, dt);
       J.hist.push({ t: t, c: J.c, cs: J.cs2, v: J.v });
@@ -852,7 +853,7 @@ class Component extends DCLogic {
       // with a slower wave, slow, broad, low kinks and almost no rim drive. Rim strands carry the full wave.
       var wo = Math.max(0, Math.min(1, (Math.abs(rf) - 0.15) / 0.6)); wo = wo * wo * (3 - 2 * wo);
       var wc = 1 - wo, tauN = WAVE_T;
-      var len = (base + (n % 2) * 14) * (1 + 0.1 * wc), drive = rf * (0.2 + 0.8 * wo), K = len / 3.2;
+      var len = (base + (n % 2) * 14) * (1 + 0.1 * wc), drive = rf * (0.2 + 0.8 * wo), K = len / 3.2, ampS = (11 + 4 * calm + 3 * e) * (0.6 + 0.4 * wo);
       xs.push([]); ys.push([]); hooks.push([]); hooksY.push([]);
       for (var j2 = 0; j2 <= JN; j2++) {
         var f = j2 / JN, tau = tauN * f;
@@ -861,13 +862,15 @@ class Component extends DCLogic {
         // so the wave is one broad S rather than a tight kink from the quick push
         var cm = lerp(hd.c, hd.cs == null ? hd.c : hd.cs, Math.min(1, f / 0.2)), sh = shape(cm, cm);
         var rootX = cx + rf * sh.half * 0.9, rootY = sh.rimY + 4 + calm * 6;
-        var a = ampBase * (0.25 + f) * (1 - 0.4 * sp);
-        var ph = f * 5 - J.wave + n * 0.45;
-        var q = f * 5.5 + n * 0.25 - J.wave * 0.3;
-        var zz = 1 - 4 * Math.abs(q - Math.round(q));
-        var undO = a * (Math.sin(ph) * (1 - jag) + zz * 0.8 * jag);
-        var undC = ampBase * 0.5 * (0.1 + f) * (1 - 0.3 * sp) * Math.sin(f * 2.1 - J.wave * 0.4 + n * 1.3);
-        var und = undO * wo + undC * wc;
+        // the resting S: every strand always holds exactly one S (one wavelength over its length), travelling root
+        // to tip once per breath, so even at rest no strand hangs as a straight line. It ramps in under the rim so
+        // the root stays tangent to the bell. Neighbours are slightly out of phase; centre strands are gentler.
+        var Gs = Math.sin(Math.PI / 2 * Math.min(1, f / 0.25)) * (0.7 + 0.5 * f);
+        var und = ampS * (1 - 0.3 * sp) * Gs * Math.sin(2 * Math.PI * f - (J.swPh || 0) + n * 0.5);
+        if (jag > 0) {                                     // high energy only: the jagged edge
+          var q = f * 5.5 + n * 0.25 - J.wave * 0.3, zz = 1 - 4 * Math.abs(q - Math.round(q));
+          und += jag * ampBase * 0.6 * (0.25 + f) * zz;
+        }
         var drag = rf * vig * (3 - 18 * sp) * f;          // strands stream together at speed
         // the travelling offset
         var G = Math.sin(Math.PI / 2 * Math.min(1, f / 0.3)) * (1 + 0.4 * f * f);
@@ -1075,7 +1078,7 @@ class Component extends DCLogic {
     el.hSwayRef.style.display = pair && ga.w > 0.001 ? '' : 'none';
     if (pair && ga.w > 0.001) {
       // the partner moves in exact sync: same stroke, same tentacle wave, same sway (only colour and tone differ)
-      this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave, per: G.per }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
+      this.drawJelly({ c: G.c, hist: G.hist, wave: G.wave, per: G.per, swPh: G.swPh }, { bell: el.hBellRef, inner: el.hInnerRef, gloss: el.hGlossRef, tent: el.hTentRef }, t, eGs, vTop);
       var gw2 = gw;                                   // moves in exact lockstep with its partner
       el.hSwayRef.setAttribute('transform', 'translate(' + (offX + bDx + gA * Math.sin(gw2)).toFixed(1) + ' ' + (bDy - G.rel).toFixed(1) + ') rotate(' + (gT * Math.cos(gw2)).toFixed(2) + ' ' + (305 + offX + bDx).toFixed(1) + ' ' + (360 + bDy).toFixed(1) + ')');
       el.hBodyRef.setAttribute('transform', 'translate(0 ' + gDip.toFixed(1) + ')');
