@@ -805,16 +805,20 @@ class Component extends DCLogic {
         var undC = ampBase * 0.5 * (0.1 + f) * (1 - 0.3 * Rw.sp) * Math.sin(f * 2.1 - J.wave * 0.4 + n * 1.3);
         var und = undO * wo + undC * wc;
         var drag = rf * vig * (3 - 18 * Rw.sp) * f;          // strands stream together at speed
-        // Loaded roots (anticipation) with overlapping action: the tentacle is a chain of segments. As the bell opens,
-        // the top segments bend outward and the next ones curl back inward, making the C-curve; each segment feels the
-        // load a little later than the one above it, so the curl rolls down the chain as it loads and as it releases.
-        // Strongest on the outer tentacles.
+        // Roots driven by the rim, with overlapping action. Each tentacle leaves the bell tangent to the rim margin
+        // (flared out on the inhale, tucked in on the push), so bell and tentacle read as one continuous curve. That
+        // root angle is the drive: each segment down the chain takes the angle the root had a moment earlier and
+        // relaxes toward hanging straight, so the curve continues the bell's own curvature (a C on the load) and every
+        // change starts at the root and travels down (the push snaps the root first, making the S as it runs down).
+        // Strongest on the outer tentacles; the centre ribbons barely take it.
         if (j2 === 0) { chAng = 0; chX = 0; chY = 0; }
         else {
-          var hj2 = at(t - 0.45 * f);
-          var ld = Math.max(0, Math.min(1, (-hj2.c - 0.2) / 0.95)); ld = ld * ld * (3 - 2 * ld);
-          var bend = f <= 0.17 ? 0.25 : f <= 0.58 ? -0.125 : 0;      // out over the top ~4 links, back over the next ~10
-          chAng += (rf >= 0 ? 1 : -1) * (0.3 + 0.7 * Math.abs(rf)) * (0.2 + 0.8 * wo) * ld * bend;
+          var fm = (j2 - 0.5) / JN;
+          var hd = at(t - 0.6 * fm), shd = shape(hd.c, hd.c);
+          var phi = Math.atan2(3 * shd.fl, shd.ry + 1.2 * shd.fl);           // rim tangent, + = outward
+          phi *= phi >= 0 ? 1 : 0.6;
+          var relax = 1 - 0.8 * Math.min(1, fm / 0.6) * Math.min(1, fm / 0.6) * (3 - 2 * Math.min(1, fm / 0.6));
+          chAng = rf * (0.2 + 0.8 * wo) * phi * relax;
           var segL = len / JN;
           chX += segL * Math.sin(chAng); chY += segL * (Math.cos(chAng) - 1);
         }
