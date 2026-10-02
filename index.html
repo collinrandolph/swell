@@ -806,8 +806,9 @@ class Component extends DCLogic {
   //   0.33-0.4 hold at full flare (matches the sound's dip at the top of the breath)
   //   0.4-0.5 push: snaps shut and lunges up; 0.5-0.65 eases into the glide
   //   0.65-1 glide: tall, narrow, streamlined (c ~ +0.8)
-  bellPulse(ph) {
+  bellPulse(ph, pushFrom) {
     var Tp = [0, 0.08, 0.33, 0.4, 0.5, 0.65, 1], Cp = [0.8, 0.45, -1.3, -1.36, 1.15, 1.0, 0.8];
+    if (pushFrom != null) Cp[3] = pushFrom;          // a push that didn't start from full flare starts from where the bell is
     for (var ii = 0; ii < Tp.length - 1; ii++) if (ph <= Tp[ii + 1]) {
       var uu = (ph - Tp[ii]) / (Tp[ii + 1] - Tp[ii]);
       return Cp[ii] + (Cp[ii + 1] - Cp[ii]) * (1 - Math.cos(Math.PI * uu)) / 2;
@@ -833,7 +834,12 @@ class Component extends DCLogic {
     }
     J.v -= (J.v / 7 + J.v * J.v / 900) * dt; if (J.v < 0) J.v = 0;
     J.dist += J.v * dt;
-    J.c = (0.85 + 0.15 * Math.min(1, J.v / 750)) * this.bellPulse(J.ph);
+    // the bell eases toward the shape its clock asks for (two short smoothing stages), so a sudden change in the
+    // clock (an early or late breath) never jolts the bell or whips the tentacles
+    if (J.pushFrom != null && (J.ph < 0.4 || J.ph >= 0.5)) J.pushFrom = null;
+    var cT = (0.85 + 0.15 * Math.min(1, J.v / 750)) * this.bellPulse(J.ph, J.pushFrom), kc = 1 - Math.exp(-dt / 0.07);
+    if (J.c1 == null) { J.c1 = cT; J.c = cT; }
+    J.c1 += (cT - J.c1) * kc; J.c += (J.c1 - J.c) * kc;
     J.wave += dt * 2 * Math.PI / (2.6 - 1.2 * e);
     if (t != null) {
       J.hist.push({ t: t, c: J.c, v: J.v });
@@ -1049,8 +1055,10 @@ class Component extends DCLogic {
     var inDur = this.mic && this.mic.prof && this.mic.prof.in ? this.mic.prof.in.dur : 0.33 * P;
     var rate = 1 / P;
     if (owed && !inPowNow) {
-      // an exhale: hurry forward into the push (never backwards, never a restart)
-      rate = Math.max(rate, (ph < 0.4 ? 0.4 - ph : 1.4 - ph) / 0.22);
+      // an exhale: at the top of the breath, carry straight on into the push; anywhere else, push from the shape
+      // the bell is in now (no racing through a whole inhale). The bell eases into the new shape (bellStep).
+      if (ph >= 0.33 && ph < 0.4) rate = Math.max(rate, (0.4 - ph) / 0.15);
+      else { s.pushFrom = s.c / (0.85 + 0.15 * Math.min(1, s.v / 750)); ph = 0.4; s.ph = 0.4; s.relaxing = false; }
       s.holdAt = null;
     } else if (s.resting) rate = 0;
     else if (ph < 0.33) {
@@ -1061,7 +1069,7 @@ class Component extends DCLogic {
       if (s.holdAt == null) s.holdAt = t;
       var waited = hearIn && s.inhaleEndAt && !s.inhaling ? t - Math.max(s.inhaleEndAt, s.holdAt) : t - s.holdAt;
       rate = ph < 0.39 ? rate : 0;
-      if (!s.inhaling && waited > (hearIn ? 1.2 : 0.35 * P)) s.relaxing = true;
+      if (!s.inhaling && waited > (hearIn ? 1.5 : 0.5 * P)) s.relaxing = true;
     }
     if (s.relaxing && !owed) {
       s.ph = Math.max(0, ph - 0.4 * dt);
