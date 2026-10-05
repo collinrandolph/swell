@@ -62,7 +62,7 @@ body{margin:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:no
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"micThreshold":{"editor":"range","default":8,"min":3,"max":20,"step":0.5,"unit":"dB"},"calBreaths":{"editor":"range","default":4,"min":2,"max":10,"step":1,"unit":"exhales"},"minBreath":{"editor":"range","default":0.6,"min":0.1,"max":1.5,"step":0.05,"unit":"s"},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"]},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"micThreshold":{"editor":"range","default":8,"min":3,"max":20,"step":0.5,"unit":"dB"},"calBreaths":{"editor":"range","default":4,"min":2,"max":10,"step":1,"unit":"exhales"},"minBreath":{"editor":"range","default":0.6,"min":0.1,"max":1.5,"step":0.05,"unit":"s"},"splitDip":{"editor":"range","default":8,"min":3,"max":20,"step":0.5,"unit":"dB"},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"]},"$preview":{"width":390,"height":844}}'>
 // Breath lab: the jellyfish and the breath identification from Swell, with nothing else. No cues: just whether a
 // breath reliably registers and drives the jellyfish. The button: press = breathe out, hold through the glide,
 // release = breathe in.
@@ -149,21 +149,43 @@ class Component extends DCLogic {
       // a sound only counts as a breath once it has lasted minBreath: shorter noises (a click, a lip sound, the
       // turn between breaths) are never labelled and never count toward which breath comes next
       if (!ev.decided && ev.levels.length >= 7 && ev.on >= (this.props.minBreath ?? 0.6)) this.micDecide(ev);
+      // Continuous breathing never goes quiet between breaths: the turn shows as a valley instead (loud, a clear dip,
+      // loud again). Once a sound has lasted long enough to be a breath, a dip of splitDip below its peak followed by
+      // a rise of 6 dB out of the dip (held for a moment) ends it at the bottom of the valley and starts the next
+      // breath there.
+      var DIP = this.props.splitDip ?? 8;
+      if (ev.on >= (this.props.minBreath ?? 0.6)) ev.segPeak = Math.max(ev.segPeak || rel, rel);
+      if (ev.segPeak != null) {
+        if (ev.dipMin == null || rel < ev.dipMin) { if (rel < ev.segPeak - DIP) { ev.dipMin = rel; ev.dipMinT = t; ev.riseFor = 0; } }
+        if (ev.dipMin != null) {
+          ev.riseFor = rel > ev.dipMin + 6 ? (ev.riseFor || 0) + dt : 0;
+          if (ev.riseFor >= 0.1) { this.micSplit(ev, ev.dipMinT - m.lag, t, rel); return; }
+        }
+      }
       m.below = rel < offT ? m.below + dt : 0;
       if (m.below >= 0.15) this.micEnd(ev);
-      else if (ev.dur > 8) { this.micEnd(ev); m.floor = m.eS; }    // nothing breathes for 8 s: the room got louder, re-learn the floor
+      else if (ev.dur > 12) { this.micEnd(ev); m.floor = m.eS; }    // 12 s with no valley: the room got louder, re-learn the floor
     }
+  }
+  // end the current sound at the bottom of a valley and start the next breath there
+  micSplit(ev, tSplit, t, rel) {
+    var m = this.mic;
+    ev.dur = tSplit - ev.t0; ev.endAt = tSplit;
+    this.micEnd(ev);
+    var nv = { t0: tSplit, levels: [], cens: [], peak: rel, dur: t - m.lag - tSplit, on: t - m.lag - tSplit, decided: false, split: true };
+    m.ev = nv; m.below = 0; m.nSplit = (m.nSplit || 0) + 1;
   }
   micFeat(ev) {
     var a = 0, c = 0; for (var i = 0; i < ev.levels.length; i++) { a += ev.levels[i]; c += ev.cens[i]; }
     return [a / ev.levels.length, Math.log2(Math.max(60, c / ev.levels.length))];
   }
-  micClassify(f, cue) {
+  micClassify(f, cue, split) {
     var m = this.mic, P = m.prof, best = null, bs = -1e9;
     ['ex', 'in'].forEach(function (k) {
       var sc = 0;
       for (var j = 0; j < 2; j++) { var z = (f[j] - P[k].mu[j]) / P[k].sd[j]; sc -= 0.5 * z * z + Math.log(P[k].sd[j]); }
-      sc += Math.log(m.lastLabel == null ? 0.5 : (m.lastLabel === k ? 0.25 : 0.75));   // breaths alternate
+      var pSame = split ? 0.1 : 0.25;                                                  // breaths alternate (all the more across a valley)
+      sc += Math.log(m.lastLabel == null ? 0.5 : (m.lastLabel === k ? pSame : 1 - pSame));
       if (cue) sc += Math.log(cue === k ? 0.8 : 0.2);                                   // the cue showing when it began
       if (sc > bs) { bs = sc; best = k; }
     });
@@ -177,6 +199,7 @@ class Component extends DCLogic {
   // and sounds like it, continues that breath (same label, not a new breath).
   micCont(ev) {
     var m = this.mic, s = this.sim;
+    if (ev.split) return false;
     if (m.lastEndT == null || !m.lastLabel || !s || s.phase === 'start' || ev.t0 + m.lag - 0.06 - m.lastEndT > 0.35) return false;
     // a piece that sounds clearly different (much louder or darker, as an exhale is next to an inhale) is a new breath
     if (m.lastF && ev.f && (Math.abs(ev.f[0] - m.lastF[0]) > 8 || Math.abs(ev.f[1] - m.lastF[1]) > 0.6)) return false;
@@ -190,7 +213,7 @@ class Component extends DCLogic {
     var m = this.mic; ev.decided = true; ev.f = this.micFeat(ev);
     if (this.micCont(ev)) return;
     var label;
-    if (m.mode === 'both') { ev.cue = this.micCueAt(ev.t0); label = this.micClassify(ev.f, ev.cue); }
+    if (m.mode === 'both') { ev.cue = this.micCueAt(ev.t0); label = this.micClassify(ev.f, ev.cue, ev.split); }
     else if (m.mode === 'exhale') {
       // exhales only: anything far quieter or far brighter than your exhales is a stray inhale or room noise
       var P = m.prof.ex;
@@ -205,7 +228,8 @@ class Component extends DCLogic {
         sS.phase = 'swim'; sS.t0 = ev.t0;
         m.anchorIn = ev.f.slice(); ev.cue = 'in'; label = 'in';
       }
-      else if ((ev.core = this.micCueCore(ev.t0))) { label = ev.core; ev.cue = ev.core; }   // clearly inside a cue: the cue labels it
+      else if (ev.split && m.lastLabel) label = m.lastLabel === 'in' ? 'ex' : 'in';   // across a valley: the other kind of breath
+      else if ((ev.core = this.micCueCore(ev.t0))) { label = ev.core; ev.cue = ev.core; }
       else if ((ev.cue = this.micCueAt(ev.t0))) label = ev.cue;                              // the cue on screen labels it
       else {
         // no cue to go on: judge by sound against the exhales heard so far, and keep breaths alternating
@@ -240,7 +264,7 @@ class Component extends DCLogic {
     if (!ev.decided) { ev.f = this.micFeat(ev); ev.label = m.mode === 'both' && m.prof ? this.micClassify(ev.f, this.micCueAt(ev.t0)) : 'ex'; ev.live = ev.label; ev.decided = true; if (ev.label === 'ex') this.breathStart(ev.t0); else this.inhaleStart(ev.t0); }
     if (ev.label === 'ex') this.breathEnd(); else if (ev.label === 'in') this.inhaleEnd();
     if (ev.label === 'x' && m.guard != null) m.guard = Math.min(m.exPeakMin != null ? m.exPeakMin - 2 : Infinity, Math.max(m.guard, ev.peak + 2));
-    if (ev.label !== 'x') { m.lastLabel = ev.label; m.lastEndT = performance.now() / 1000 - m.below; m.lastF = ev.f; }   // when the sound actually stopped
+    if (ev.label !== 'x') { m.lastLabel = ev.label; m.lastEndT = ev.endAt != null ? ev.endAt + m.lag : performance.now() / 1000 - m.below; m.lastF = ev.f; }   // when the sound actually stopped
     rec = { t0: ev.t0, f: ev.f, peak: ev.peak, dur: ev.dur, label: ev.label, live: ev.live || ev.label, cue: ev.cue || null, core: ev.core || null, mode: m.mode, short: ev.dur < 0.25 };
     if (!rec.short) { m.events.push(rec); if (m.events.length > 60) m.events.shift(); }
     m.log.push(rec); if (m.log.length > 200) m.log.shift();
@@ -625,7 +649,7 @@ class Component extends DCLogic {
     var calN = this.props.calBreaths ?? 4;
     if (m.mode === 'calibrating') {
       var ne = m.events.filter(function (x) { return x.label === 'ex'; }).length, ni = m.events.filter(function (x) { return x.label === 'in'; }).length;
-      return 'Calibrating · exhales ' + ne + ' / ' + calN + ' · inhales ' + ni + (m.nShort ? ' · short sounds ignored ' + m.nShort : '');
+      return 'Calibrating · exhales ' + ne + ' / ' + calN + ' · inhales ' + ni + (m.nShort ? ' · short sounds ignored ' + m.nShort : '') + (m.nSplit ? ' · split at valleys ' + m.nSplit : '');
     }
     if (m.mode === 'both') return 'Calibrated · hearing inhales and exhales' + (m.nShort ? ' · short sounds ignored ' + m.nShort : '');
     return 'Calibrated · hearing exhales only' + (m.warn ? ' (' + m.warn + ')' : '');
