@@ -62,7 +62,7 @@ body{margin:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:no
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"micThreshold":{"editor":"range","default":8,"min":3,"max":20,"step":0.5,"unit":"dB"},"calBreaths":{"editor":"range","default":4,"min":2,"max":10,"step":1,"unit":"exhales"},"minBreath":{"editor":"range","default":0.6,"min":0.1,"max":1.5,"step":0.05,"unit":"s"},"splitDip":{"editor":"range","default":8,"min":3,"max":20,"step":0.5,"unit":"dB"},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"]},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"micThreshold":{"editor":"range","default":8,"min":3,"max":20,"step":0.5,"unit":"dB"},"onPct":{"editor":"range","default":30,"min":10,"max":70,"step":5,"unit":"% of peak"},"endPct":{"editor":"range","default":25,"min":5,"max":60,"step":5,"unit":"% of peak"},"dipPct":{"editor":"range","default":75,"min":30,"max":90,"step":5,"unit":"% of peak"},"calBreaths":{"editor":"range","default":4,"min":2,"max":10,"step":1,"unit":"exhales"},"minBreath":{"editor":"range","default":0.6,"min":0.1,"max":1.5,"step":0.05,"unit":"s"},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"]},"$preview":{"width":390,"height":844}}'>
 // Breath lab: the jellyfish and the breath identification from Swell, with nothing else. No cues: just whether a
 // breath reliably registers and drives the jellyfish. The button: press = breathe out, hold through the glide,
 // release = breathe in.
@@ -91,7 +91,7 @@ class Component extends DCLogic {
   recalibrate() {
     this.sim = null; this.init();
     var m = this.mic;
-    if (m) { m.mode = 'calibrating'; m.events = []; m.log = []; m.lastEndT = null; m.lastLabel = null; m.prof = null; m.guard = null; m.warn = null; m.anchorIn = null; m.exPeakMin = null; }
+    if (m) { m.mode = 'calibrating'; m.events = []; m.log = []; m.lastEndT = null; m.lastLabel = null; m.prof = null; m.guard = null; m.warn = null; m.anchorIn = null; m.exPeakMin = null; m.peaks = null; m.nShort = 0; m.nSplit = 0; m.lastF = null; }
   }
 
   // ---------- microphone ----------
@@ -121,10 +121,19 @@ class Component extends DCLogic {
     var m = this.mic; if (!m) return;
     m.stream.getTracks().forEach(function (tr) { tr.stop(); }); m.ctx.close(); this.mic = null;
   }
+  // All thresholds scale with how loud your breaths are (dB above the room). A sound starts when it rises above onPct
+  // of the typical peak of your recent breaths (the fixed micThreshold until a breath has registered, and never
+  // below 4 dB so the room itself can't trigger it).
   micOnThreshold() {
-    var base = this.props.micThreshold ?? 8, m = this.mic;
+    var m = this.mic, base = this.props.micThreshold ?? 8;
+    if (m && m.peaks && m.peaks.length) {
+      var srt = m.peaks.slice().sort(function (a, b) { return a - b; }), med = srt[Math.floor(srt.length / 2)];
+      base = Math.max(4, (this.props.onPct ?? 30) / 100 * med);
+    }
     return m && m.mode === 'exhale' && m.guard != null ? Math.max(base, m.guard) : base;
   }
+  // a breath ends when it falls below endPct of its own peak
+  micOffThreshold(ev) { return Math.max(2.5, (this.props.endPct ?? 25) / 100 * (ev ? ev.peak : 0)); }
   micFrame(t, dt) {
     var m = this.mic; if (!m) return;
     m.an.getFloatFrequencyData(m.buf);
@@ -138,7 +147,7 @@ class Component extends DCLogic {
     if (m.warm < 1) { m.warm += dt; m.floor = m.floor == null ? m.eS : Math.min(m.floor + (m.eS - m.floor) * 0.2, m.eS); m.rel = 0; return; }   // learn the room for a second first
     if (!m.ev) m.floor += (m.eS - m.floor) * (1 - Math.exp(-dt / (m.eS < m.floor ? 0.3 : 6)));   // the floor sinks quickly, rises slowly
     var rel = m.eS - m.floor; m.rel = rel;
-    var onT = this.micOnThreshold(), offT = Math.max(2.5, onT * 0.45);
+    var onT = this.micOnThreshold(), offT = this.micOffThreshold(m.ev);
     if (!m.ev) {
       m.above = rel > onT ? m.above + dt : 0;
       if (m.above >= 0.06) { m.ev = { t0: t - m.lag, levels: [], cens: [], peak: rel, dur: 0, on: m.above, decided: false }; m.below = 0; }
@@ -150,15 +159,15 @@ class Component extends DCLogic {
       // turn between breaths) are never labelled and never count toward which breath comes next
       if (!ev.decided && ev.levels.length >= 7 && ev.on >= (this.props.minBreath ?? 0.6)) this.micDecide(ev);
       // Continuous breathing never goes quiet between breaths: the turn shows as a valley instead (loud, a clear dip,
-      // loud again). Once a sound has lasted long enough to be a breath, a dip of splitDip below its peak followed by
-      // a rise of 6 dB out of the dip (held for a moment) ends it at the bottom of the valley and starts the next
-      // breath there.
-      var DIP = this.props.splitDip ?? 8;
+      // loud again). Once a sound has lasted long enough to be a breath, a dip below dipPct of its peak followed by a
+      // rise of 15% of the peak out of the dip (held for a moment) ends it at the bottom of the valley and starts the
+      // next breath there.
+      var dipF = (this.props.dipPct ?? 75) / 100;
       if (ev.on >= (this.props.minBreath ?? 0.6)) ev.segPeak = Math.max(ev.segPeak || rel, rel);
       if (ev.segPeak != null) {
-        if (ev.dipMin == null || rel < ev.dipMin) { if (rel < ev.segPeak - DIP) { ev.dipMin = rel; ev.dipMinT = t; ev.riseFor = 0; } }
+        if (ev.dipMin == null || rel < ev.dipMin) { if (rel < ev.segPeak * dipF) { ev.dipMin = rel; ev.dipMinT = t; ev.riseFor = 0; } }
         if (ev.dipMin != null) {
-          ev.riseFor = rel > ev.dipMin + 6 ? (ev.riseFor || 0) + dt : 0;
+          ev.riseFor = rel > ev.dipMin + 0.15 * ev.segPeak ? (ev.riseFor || 0) + dt : 0;
           if (ev.riseFor >= 0.1) { this.micSplit(ev, ev.dipMinT - m.lag, t, rel); return; }
         }
       }
@@ -256,6 +265,7 @@ class Component extends DCLogic {
       if (ev.label === 'in') this.inhaleEnd();
       var lastE = m.events[m.events.length - 1];
       if (lastE) lastE.dur = Math.max(lastE.dur, ev.t0 + ev.dur - lastE.t0);
+      if (m.peaks && m.peaks.length && ev.peak > m.peaks[m.peaks.length - 1]) m.peaks[m.peaks.length - 1] = ev.peak;
       m.lastEndT = performance.now() / 1000 - m.below;
       rec = { t0: ev.t0, dur: ev.dur, f: ev.f, peak: ev.peak, label: ev.label, live: ev.label, cue: null, core: null, cont: true, mode: m.mode, parent: lastE || null };
       m.log.push(rec); if (m.log.length > 200) m.log.shift();
@@ -264,7 +274,7 @@ class Component extends DCLogic {
     if (!ev.decided) { ev.f = this.micFeat(ev); ev.label = m.mode === 'both' && m.prof ? this.micClassify(ev.f, this.micCueAt(ev.t0)) : 'ex'; ev.live = ev.label; ev.decided = true; if (ev.label === 'ex') this.breathStart(ev.t0); else this.inhaleStart(ev.t0); }
     if (ev.label === 'ex') this.breathEnd(); else if (ev.label === 'in') this.inhaleEnd();
     if (ev.label === 'x' && m.guard != null) m.guard = Math.min(m.exPeakMin != null ? m.exPeakMin - 2 : Infinity, Math.max(m.guard, ev.peak + 2));
-    if (ev.label !== 'x') { m.lastLabel = ev.label; m.lastEndT = ev.endAt != null ? ev.endAt + m.lag : performance.now() / 1000 - m.below; m.lastF = ev.f; }   // when the sound actually stopped
+    if (ev.label !== 'x') { m.peaks = (m.peaks || []).concat([ev.peak]).slice(-6); m.lastLabel = ev.label; m.lastEndT = ev.endAt != null ? ev.endAt + m.lag : performance.now() / 1000 - m.below; m.lastF = ev.f; }   // when the sound actually stopped
     rec = { t0: ev.t0, f: ev.f, peak: ev.peak, dur: ev.dur, label: ev.label, live: ev.live || ev.label, cue: ev.cue || null, core: ev.core || null, mode: m.mode, short: ev.dur < 0.25 };
     if (!rec.short) { m.events.push(rec); if (m.events.length > 60) m.events.shift(); }
     m.log.push(rec); if (m.log.length > 200) m.log.shift();
@@ -643,16 +653,21 @@ class Component extends DCLogic {
     var stt = this.labStatus();
     if (el.statusRef.textContent !== stt) el.statusRef.textContent = stt;
   }
+  thrText() {
+    var m = this.mic, on = this.micOnThreshold();
+    var pk = m.peaks && m.peaks.length ? m.peaks.slice().sort(function (a, b) { return a - b; })[Math.floor(m.peaks.length / 2)] : null;
+    return 'start ' + on.toFixed(1) + ' dB' + (pk ? ' (' + (this.props.onPct ?? 30) + '% of ' + pk.toFixed(0) + ')' : '') + ' · end ' + (this.props.endPct ?? 25) + '% · valley ' + (this.props.dipPct ?? 75) + '% of peak';
+  }
   labStatus() {
     var m = this.mic; if (!m) return this.micErr || 'Microphone off · use the button';
     if (m.warm == null || m.warm < 1) return 'Listening to the room…';
     var calN = this.props.calBreaths ?? 4;
     if (m.mode === 'calibrating') {
       var ne = m.events.filter(function (x) { return x.label === 'ex'; }).length, ni = m.events.filter(function (x) { return x.label === 'in'; }).length;
-      return 'Calibrating · exhales ' + ne + ' / ' + calN + ' · inhales ' + ni + (m.nShort ? ' · short sounds ignored ' + m.nShort : '') + (m.nSplit ? ' · split at valleys ' + m.nSplit : '');
+      return 'Calibrating · exhales ' + ne + ' / ' + calN + ' · inhales ' + ni + (m.nShort ? ' · short ignored ' + m.nShort : '') + (m.nSplit ? ' · valleys ' + m.nSplit : '') + '\n' + this.thrText();
     }
-    if (m.mode === 'both') return 'Calibrated · hearing inhales and exhales' + (m.nShort ? ' · short sounds ignored ' + m.nShort : '');
-    return 'Calibrated · hearing exhales only' + (m.warn ? ' (' + m.warn + ')' : '');
+    if (m.mode === 'both') return 'Calibrated · hearing inhales and exhales' + (m.nShort ? ' · short sounds ignored ' + m.nShort : '') + '\n' + this.thrText();
+    return 'Calibrated · hearing exhales only' + (m.warn ? ' (' + m.warn + ')' : '') + '\n' + this.thrText();
   }
 
   renderVals() {
