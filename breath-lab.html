@@ -53,6 +53,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 <div>Heard <span ref="{{heardRef}}" style="color: #9FB3BF">nothing</span></div>
 <div>Jellyfish <span ref="{{stateRef}}" style="color: #9FB3BF">resting</span></div>
 </div>
+<div style="font-size: 11px; color: #9FB3BF">Response <span ref="{{latRef}}" style="color: #E8F1F2">–</span></div>
 <div style="display: flex; align-items: center; gap: 8px">
 <div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #9FB3BF; width: 34px">Mic</div>
 <div style="position: relative; flex-grow: 1; height: 8px; border-radius: 4px; background: rgba(232,241,242,0.12); overflow: hidden">
@@ -70,7 +71,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 </div>
 </template>
 <script>
-const PROPS = {"micThreshold": 8, "onPct": 30, "endPct": 25, "dipPct": 75, "calBreaths": 4, "minBreath": 0.6, "bodyColor": "#8FD3E8"};
+const PROPS = {"micThreshold": 8, "onPct": 30, "endPct": 25, "earlyLean": 65, "dipPct": 75, "calBreaths": 4, "minBreath": 0.6, "bodyColor": "#8FD3E8"};
 
 // ---- minimal runtime: mounts the template, wires bindings, events and refs (stands in for the design-tool runtime) ----
 class DCLogic {
@@ -223,7 +224,7 @@ class Component extends DCLogic {
     var onT = this.micOnThreshold(), offT = this.micOffThreshold(m.ev);
     if (!m.ev) {
       m.above = rel > onT ? m.above + dt : 0;
-      if (m.above >= 0.06) { m.ev = { t0: t - m.lag, levels: [], cens: [], peak: rel, dur: 0, on: m.above, decided: false }; m.below = 0; }
+      if (m.above >= 0.06) { m.ev = { t0: t - m.lag, levels: [], cens: [], peak: rel, dur: 0, on: m.above, decided: false }; m.below = 0; this.provStart(t - m.lag); }
     } else {
       var ev = m.ev; ev.dur = t - ev.t0; ev.peak = Math.max(ev.peak, rel);
       if (rel >= offT) ev.on += dt;                     // time the sound is actually there (not the tail we wait out)
@@ -240,6 +241,8 @@ class Component extends DCLogic {
       if (ev.segPeak != null) {
         if (ev.dipMin == null || rel < ev.dipMin) { if (rel < ev.segPeak * dipF) { ev.dipMin = rel; ev.dipMinT = t; ev.riseFor = 0; } }
         if (ev.dipMin != null) {
+          // the next breath starts the moment the level turns back up out of the valley: respond early from there
+          if (!ev.rising && rel > ev.dipMin + 0.05 * ev.segPeak && ev.decided && ev.label !== 'x') { ev.rising = true; this.provStart(t - m.lag, ev.label === 'in' ? 'ex' : 'in'); }
           ev.riseFor = rel > ev.dipMin + 0.15 * ev.segPeak ? (ev.riseFor || 0) + dt : 0;
           if (ev.riseFor >= 0.1) { this.micSplit(ev, ev.dipMinT - m.lag, t, rel); return; }
         }
@@ -256,6 +259,24 @@ class Component extends DCLogic {
     this.micEnd(ev);
     var nv = { t0: tSplit, levels: [], cens: [], peak: rel, dur: t - m.lag - tSplit, on: t - m.lag - tSplit, decided: false, split: true };
     m.ev = nv; m.below = 0; m.nSplit = (m.nSplit || 0) + 1;
+  }
+  // Early response. The moment a sound starts (or rises out of a valley), begin moving the bell toward the breath
+  // that's due (breaths alternate). It only commits when the sound is confirmed as that breath; a short noise or the
+  // other breath lets it ease back. Off in exhales-only mode, where stray inhales would cause false pushes.
+  provStart(t0, lab) {
+    var m = this.mic, s = this.sim; if (!m || !s || m.mode === 'exhale') return;
+    lab = lab || (s.phase === 'start' || !m.lastLabel ? 'in' : m.lastLabel === 'in' ? 'ex' : 'in');
+    s.prov = { lab: lab, t0: t0 };
+    if (!s.lat || s.lat.done) s.lat = { t0: t0, c0: s.c, done: false };
+  }
+  provEnd(confirmedLab) {
+    var s = this.sim; if (!s || !s.prov) return;
+    if (confirmedLab && confirmedLab === s.prov.lab && s.provW > 0.05) {
+      if (confirmedLab === 'in') s.matchPh = true;          // carry on opening from where the bell already is
+      else s.pushFromNow = true;                            // push from the shape it is already in
+      s.provW = 0;
+    }
+    s.prov = null;
   }
   micFeat(ev) {
     var a = 0, c = 0; for (var i = 0; i < ev.levels.length; i++) { a += ev.levels[i]; c += ev.cens[i]; }
@@ -287,6 +308,7 @@ class Component extends DCLogic {
     if (m.lastF && ev.f && (Math.abs(ev.f[0] - m.lastF[0]) > 8 || Math.abs(ev.f[1] - m.lastF[1]) > 0.6)) return false;
     var cueNow = m.mode === 'calibrating' ? this.micCueAt(ev.t0) : this.micCueCore(ev.t0);
     if (cueNow && cueNow !== m.lastLabel) return false;
+    this.provEnd(null);
     ev.cont = true; ev.decided = true; ev.label = m.lastLabel; ev.live = m.lastLabel; ev.cue = null; ev.core = null;
     if (ev.label === 'in') s.inhaling = true;
     return true;
@@ -324,6 +346,7 @@ class Component extends DCLogic {
       }
     }
     ev.label = label; ev.live = label;
+    this.provEnd(label);
     if (label === 'ex') this.breathStart(ev.t0); else if (label === 'in') this.inhaleStart(ev.t0);
   }
   micEnd(ev) {
@@ -331,6 +354,7 @@ class Component extends DCLogic {
     if (!ev.decided && !ev.cont) {
       // ended before it lasted long enough to be a breath: ignore it entirely
       m.shortAt = performance.now() / 1000; m.nShort = (m.nShort || 0) + 1;
+      this.provEnd(null);
       return;
     }
     var rec;
@@ -505,7 +529,8 @@ class Component extends DCLogic {
     if (J.v > 900) J.v = 900;
     J.dist += J.v * dt;
     if (J.pushFrom != null && (J.ph < 0.4 || J.ph >= 0.5)) J.pushFrom = null;
-    var cT = (0.85 + 0.15 * Math.min(1, J.v / 750)) * this.bellPulse(J.ph, J.pushFrom), kc = 1 - Math.exp(-dt / 0.07);
+    var amp = 0.85 + 0.15 * Math.min(1, J.v / 750), cT = amp * this.bellPulse(J.ph, J.pushFrom), kc = 1 - Math.exp(-dt / 0.07);
+    if (J.provW > 0 && J.provLab) cT += ((J.provLab === 'in' ? -1.3 : 1.15) * amp - cT) * (this.props.earlyLean ?? 65) / 100 * J.provW;
     if (J.c1 == null) { J.c1 = cT; J.c = cT; }
     J.c1 += (cT - J.c1) * kc;
     var dcMax = 5 * dt;
@@ -671,11 +696,19 @@ class Component extends DCLogic {
     if (s.inhaling) s.resting = false;
     var owed = s.queue.length > 0, ph = s.ph || 0, inPowNow = ph >= 0.4 && ph < 0.62;
     if (s.inhaling && !owed && (ph >= 0.62 || s.resting || s.relaxing)) { ph = 0; s.ph = 0; s.resting = false; s.relaxing = false; s.holdAt = null; }
+    if (s.matchPh && s.inhaling && ph < 0.33) {
+      // a confirmed inhale after an early response: start the opening at the shape the bell has already reached
+      var ampM = 0.85 + 0.15 * Math.min(1, s.v / 750), lo = 0, hi = 0.33;
+      for (var it = 0; it < 16; it++) { var mid = (lo + hi) / 2; if (ampM * this.bellPulse(mid) > s.c) lo = mid; else hi = mid; }
+      ph = Math.max(ph, lo); s.ph = ph;
+    }
+    s.matchPh = false;
     var hearIn = s.inhaleAt != null && t - s.inhaleAt < 3 * P;
     var inDur = m && m.prof && m.prof.in ? m.prof.in.dur : (s.inDurEst || 0.33 * P);
     var rate = 1 / P;
     if (owed && !inPowNow) {
-      if (ph >= 0.33 && ph < 0.4) rate = Math.max(rate, (0.4 - ph) / 0.15);
+      if (s.pushFromNow) { s.pushFromNow = false; s.pushFrom = s.c / (0.85 + 0.15 * Math.min(1, s.v / 750)); ph = 0.4; s.ph = 0.4; s.relaxing = false; }
+      else if (ph >= 0.33 && ph < 0.4) rate = Math.max(rate, (0.4 - ph) / 0.15);
       else { s.pushFrom = s.c / (0.85 + 0.15 * Math.min(1, s.v / 750)); ph = 0.4; s.ph = 0.4; s.relaxing = false; }
       s.holdAt = null;
     } else if (s.resting) rate = 0;
@@ -698,6 +731,13 @@ class Component extends DCLogic {
       if (!owed && ph < 0.4 && s.ph >= 0.39) s.ph = 0.39;
       if (s.ph >= 1) { s.ph -= 1; s.holdAt = null; if (!owed && !s.inhaling && (hearIn || !s.rate)) { s.ph = 0; s.resting = true; } }
     }
+    // early response weight: grows with how long the sound has lasted (so a short noise only leans a little, a real
+    // breath leans further and further until it is confirmed), and eases away over 0.25 s when it isn't
+    if (s.prov) {
+      var heldFor = m && m.ev ? (m.ev.split || !m.ev.decided ? m.ev.on : (t - m.lag) - s.prov.t0) : 0;
+      s.provW = Math.max(s.provW || 0, Math.min(1, Math.pow(Math.max(0, heldFor) / (this.props.minBreath ?? 0.6), 1.5)));
+    } else s.provW = Math.max(0, (s.provW || 0) - dt / 0.25);
+    if (s.prov) s.provLab = s.prov.lab;
     this.bellStep(s, dt, rate || 1 / P, function () { return s.queue.shift() || 0; }, e, t);
     this.drawJelly(s, { bell: el.bellRef, inner: el.innerRef, gloss: el.glossRef, tent: el.tentRef }, t, e, vTop);
     var A = 10 + 30 * e, Tr = 3 + 7 * e, wph = 2 * Math.PI * s.dist / 900;
@@ -712,7 +752,7 @@ class Component extends DCLogic {
     el.haloRef.style.opacity = heard ? '0.55' : '0.15';
     var hTxt = heard === 'in' ? 'inhale' : heard === 'ex' ? 'exhale' : heard === 'x' ? 'ignored sound' : heard === '?' ? 'a sound…' : heard === 'short' ? 'too short, ignored' : 'nothing';
     if (el.heardRef.textContent !== hTxt) { el.heardRef.textContent = hTxt; el.heardRef.style.color = heard ? COL[heard] : '#9FB3BF'; }
-    var sp = s.ph, sTxt = s.phase === 'start' ? 'waiting' : s.resting ? 'resting' : s.relaxing ? 'settling' : sp < 0.33 ? 'opening (inhale)' : sp < 0.4 ? 'open, holding' : sp < 0.5 ? 'push' : sp < 0.65 ? 'easing' : 'glide';
+    var sp = s.ph, sTxt = s.prov ? (s.prov.lab === 'in' ? 'starting to open' : 'starting to push') : s.phase === 'start' ? 'waiting' : s.resting ? 'resting' : s.relaxing ? 'settling' : sp < 0.33 ? 'opening (inhale)' : sp < 0.4 ? 'open, holding' : sp < 0.5 ? 'push' : sp < 0.65 ? 'easing' : 'glide';
     if (el.stateRef.textContent !== sTxt) el.stateRef.textContent = sTxt;
     var pr = s.phase !== 'start' ? '' : m ? (m.warm >= 1 ? 'Breathe in' : 'Listening to the room…') : (this.micErr || 'Hold to breathe out');
     el.promptRef.style.opacity = pr ? '1' : '0';
@@ -723,6 +763,13 @@ class Component extends DCLogic {
     el.lvlRef.style.transform = 'scaleX(' + (m ? Math.max(0, Math.min(1, m.rel / 50)) : 0).toFixed(3) + ')';
     el.lvlRef.style.background = heard && m ? COL[heard] : '#E8F1F2';
     el.thrRef.style.left = (Math.min(1, onT / 50) * 100).toFixed(1) + '%';
+    // response time: from when a sound began to when the bell has visibly moved (shape change of 0.15)
+    if (s.lat && !s.lat.done && Math.abs(s.c - s.lat.c0) > 0.15) {
+      s.lat.done = true; s.lats = (s.lats || []).concat([t - s.lat.t0]).slice(-8);
+      var avg = s.lats.reduce(function (a, b) { return a + b; }, 0) / s.lats.length;
+      el.latRef.textContent = (t - s.lat.t0).toFixed(2) + ' s · average ' + avg.toFixed(2) + ' s over ' + s.lats.length;
+    }
+    if (s.lat && !s.lat.done && t - s.lat.t0 > 3) s.lat.done = true;   // nothing visible came of it (a noise)
     var stt = this.labStatus();
     if (el.statusRef.textContent !== stt) el.statusRef.textContent = stt;
   }
@@ -749,7 +796,7 @@ class Component extends DCLogic {
     var bodyColor = this.props.bodyColor ?? '#8FD3E8';
     var vals = {};
     ['swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'promptRef', 'heardRef', 'stateRef',
-      'statusRef', 'lvlRef', 'thrRef'].forEach(function (nm) { vals[nm] = self.ref(nm); });
+      'statusRef', 'lvlRef', 'thrRef', 'latRef'].forEach(function (nm) { vals[nm] = self.ref(nm); });
     return Object.assign(vals, {
       bodyColor: bodyColor,
       micLabel: st.mic ? 'Mic on' : 'Mic off',
