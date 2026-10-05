@@ -70,7 +70,7 @@ a{color:#9FD3E8}a:hover{color:#CFEAF3}
 </div>
 </template>
 <script>
-const PROPS = {"micThreshold": 8, "calBreaths": 4, "bodyColor": "#8FD3E8"};
+const PROPS = {"micThreshold": 8, "calBreaths": 4, "minBreath": 0.6, "bodyColor": "#8FD3E8"};
 
 // ---- minimal runtime: mounts the template, wires bindings, events and refs (stands in for the design-tool runtime) ----
 class DCLogic {
@@ -214,11 +214,14 @@ class Component extends DCLogic {
     var onT = this.micOnThreshold(), offT = Math.max(2.5, onT * 0.45);
     if (!m.ev) {
       m.above = rel > onT ? m.above + dt : 0;
-      if (m.above >= 0.06) { m.ev = { t0: t - m.lag, levels: [], cens: [], peak: rel, dur: 0, decided: false }; m.below = 0; }
+      if (m.above >= 0.06) { m.ev = { t0: t - m.lag, levels: [], cens: [], peak: rel, dur: 0, on: m.above, decided: false }; m.below = 0; }
     } else {
       var ev = m.ev; ev.dur = t - ev.t0; ev.peak = Math.max(ev.peak, rel);
-      if (ev.levels.length < 7) { ev.levels.push(rel); ev.cens.push(cen); }
-      if (!ev.decided && ev.levels.length >= 7) this.micDecide(ev);
+      if (rel >= offT) ev.on += dt;                     // time the sound is actually there (not the tail we wait out)
+      if (!ev.decided && ev.levels.length < 60) { ev.levels.push(rel); ev.cens.push(cen); }
+      // a sound only counts as a breath once it has lasted minBreath: shorter noises (a click, a lip sound, the
+      // turn between breaths) are never labelled and never count toward which breath comes next
+      if (!ev.decided && ev.levels.length >= 7 && ev.on >= (this.props.minBreath ?? 0.6)) this.micDecide(ev);
       m.below = rel < offT ? m.below + dt : 0;
       if (m.below >= 0.15) this.micEnd(ev);
       else if (ev.dur > 8) { this.micEnd(ev); m.floor = m.eS; }    // nothing breathes for 8 s: the room got louder, re-learn the floor
@@ -243,11 +246,13 @@ class Component extends DCLogic {
   cuePhaseAt() { return null; }
   micCueAt() { return null; }
   micCueCore() { return null; }
-  // A breath often reaches the mic in pieces. A sound that starts within 0.5 s of the previous one ending continues
-  // that breath (same label, not a new breath), unless it starts under the other breath's cue.
+  // A breath often reaches the mic in pieces. A sound that resumes within 0.35 s of the previous one actually stopping,
+  // and sounds like it, continues that breath (same label, not a new breath).
   micCont(ev) {
     var m = this.mic, s = this.sim;
-    if (m.lastEndT == null || !m.lastLabel || !s || s.phase === 'start' || ev.t0 - m.lastEndT > 0.5) return false;
+    if (m.lastEndT == null || !m.lastLabel || !s || s.phase === 'start' || ev.t0 + m.lag - 0.06 - m.lastEndT > 0.35) return false;
+    // a piece that sounds clearly different (much louder or darker, as an exhale is next to an inhale) is a new breath
+    if (m.lastF && ev.f && (Math.abs(ev.f[0] - m.lastF[0]) > 8 || Math.abs(ev.f[1] - m.lastF[1]) > 0.6)) return false;
     var cueNow = m.mode === 'calibrating' ? this.micCueAt(ev.t0) : this.micCueCore(ev.t0);
     if (cueNow && cueNow !== m.lastLabel) return false;
     ev.cont = true; ev.decided = true; ev.label = m.lastLabel; ev.live = m.lastLabel; ev.cue = null; ev.core = null;
@@ -290,13 +295,17 @@ class Component extends DCLogic {
   }
   micEnd(ev) {
     var m = this.mic; m.ev = null;
-    if (!ev.decided && !ev.cont) { ev.f = this.micFeat(ev); this.micCont(ev); }
+    if (!ev.decided && !ev.cont) {
+      // ended before it lasted long enough to be a breath: ignore it entirely
+      m.shortAt = performance.now() / 1000; m.nShort = (m.nShort || 0) + 1;
+      return;
+    }
     var rec;
     if (ev.cont) {
       if (ev.label === 'in') this.inhaleEnd();
       var lastE = m.events[m.events.length - 1];
       if (lastE) lastE.dur = Math.max(lastE.dur, ev.t0 + ev.dur - lastE.t0);
-      m.lastEndT = performance.now() / 1000;
+      m.lastEndT = performance.now() / 1000 - m.below;
       rec = { t0: ev.t0, dur: ev.dur, f: ev.f, peak: ev.peak, label: ev.label, live: ev.label, cue: null, core: null, cont: true, mode: m.mode, parent: lastE || null };
       m.log.push(rec); if (m.log.length > 200) m.log.shift();
       return;
@@ -304,7 +313,7 @@ class Component extends DCLogic {
     if (!ev.decided) { ev.f = this.micFeat(ev); ev.label = m.mode === 'both' && m.prof ? this.micClassify(ev.f, this.micCueAt(ev.t0)) : 'ex'; ev.live = ev.label; ev.decided = true; if (ev.label === 'ex') this.breathStart(ev.t0); else this.inhaleStart(ev.t0); }
     if (ev.label === 'ex') this.breathEnd(); else if (ev.label === 'in') this.inhaleEnd();
     if (ev.label === 'x' && m.guard != null) m.guard = Math.min(m.exPeakMin != null ? m.exPeakMin - 2 : Infinity, Math.max(m.guard, ev.peak + 2));
-    if (ev.label !== 'x') { m.lastLabel = ev.label; m.lastEndT = performance.now() / 1000; }
+    if (ev.label !== 'x') { m.lastLabel = ev.label; m.lastEndT = performance.now() / 1000 - m.below; m.lastF = ev.f; }   // when the sound actually stopped
     rec = { t0: ev.t0, f: ev.f, peak: ev.peak, dur: ev.dur, label: ev.label, live: ev.live || ev.label, cue: ev.cue || null, core: ev.core || null, mode: m.mode, short: ev.dur < 0.25 };
     if (!rec.short) { m.events.push(rec); if (m.events.length > 60) m.events.shift(); }
     m.log.push(rec); if (m.log.length > 200) m.log.shift();
@@ -662,12 +671,12 @@ class Component extends DCLogic {
     el.bodyRef.setAttribute('transform', 'translate(0 ' + this.bodyDip(s, vTop).toFixed(1) + ')');
 
     // what is being heard right now (mic), or what the button says
-    var heard = m && m.ev ? (m.ev.decided ? m.ev.label : '?') : this.btnDown ? 'ex' : null;
+    var heard = m && m.ev ? (m.ev.decided ? m.ev.label : '?') : this.btnDown ? 'ex' : m && m.shortAt && t - m.shortAt < 1 ? 'short' : null;
     if (!heard && !m && s.inhaling) heard = 'in';
-    var COL = { in: '#B9A7F0', ex: '#8FD3E8', x: '#6B7C88', '?': '#E8F1F2' };
+    var COL = { in: '#B9A7F0', ex: '#8FD3E8', x: '#6B7C88', '?': '#E8F1F2', short: '#6B7C88' };
     el.haloRef.style.fill = heard ? COL[heard] : (this.props.bodyColor ?? '#8FD3E8');
     el.haloRef.style.opacity = heard ? '0.55' : '0.15';
-    var hTxt = heard === 'in' ? 'inhale' : heard === 'ex' ? 'exhale' : heard === 'x' ? 'ignored sound' : heard === '?' ? 'a sound…' : 'nothing';
+    var hTxt = heard === 'in' ? 'inhale' : heard === 'ex' ? 'exhale' : heard === 'x' ? 'ignored sound' : heard === '?' ? 'a sound…' : heard === 'short' ? 'too short, ignored' : 'nothing';
     if (el.heardRef.textContent !== hTxt) { el.heardRef.textContent = hTxt; el.heardRef.style.color = heard ? COL[heard] : '#9FB3BF'; }
     var sp = s.ph, sTxt = s.phase === 'start' ? 'waiting' : s.resting ? 'resting' : s.relaxing ? 'settling' : sp < 0.33 ? 'opening (inhale)' : sp < 0.4 ? 'open, holding' : sp < 0.5 ? 'push' : sp < 0.65 ? 'easing' : 'glide';
     if (el.stateRef.textContent !== sTxt) el.stateRef.textContent = sTxt;
@@ -689,9 +698,9 @@ class Component extends DCLogic {
     var calN = this.props.calBreaths ?? 4;
     if (m.mode === 'calibrating') {
       var ne = m.events.filter(function (x) { return x.label === 'ex'; }).length, ni = m.events.filter(function (x) { return x.label === 'in'; }).length;
-      return 'Calibrating · exhales ' + ne + ' / ' + calN + ' · inhales ' + ni;
+      return 'Calibrating · exhales ' + ne + ' / ' + calN + ' · inhales ' + ni + (m.nShort ? ' · short sounds ignored ' + m.nShort : '');
     }
-    if (m.mode === 'both') return 'Calibrated · hearing inhales and exhales';
+    if (m.mode === 'both') return 'Calibrated · hearing inhales and exhales' + (m.nShort ? ' · short sounds ignored ' + m.nShort : '');
     return 'Calibrated · hearing exhales only' + (m.warn ? ' (' + m.warn + ')' : '');
   }
 
