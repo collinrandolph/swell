@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Swell</title>
 <meta name="description" content="Breathe with the jellyfish you meet and rise from the ocean floor to the surface.">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,6 +20,9 @@ html,body{background:#06101B!important;height:100dvh!important}
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
 html,body{margin:0;height:100%;background:#02060B;overflow:hidden}
+/* phone: no text selection, long-press menu, tap flash or double-tap zoom */
+html,body,#phone,#phone *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+html,body{touch-action:manipulation}
 body{display:flex;align-items:center;justify-content:center}
 #stage{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
 #phone{width:390px;height:844px;flex:none;transform-origin:center center;border-radius:28px;overflow:hidden;box-shadow:0 0 0 1px rgba(232,241,242,0.08),0 30px 80px rgba(0,0,0,0.6)}

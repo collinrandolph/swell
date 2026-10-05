@@ -11,11 +11,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-body{margin:0}
+body{margin:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 </style>
 </helmet>
-<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #06101B; color: #E8F1F2; font-family: 'IBM Plex Mono', ui-monospace, monospace">
-<svg viewBox="0 0 390 300" style="position: absolute; left: 0; top: 0; width: 390px; height: 300px" aria-hidden="true">
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #06101B; color: #E8F1F2; font-family: 'IBM Plex Mono', ui-monospace, monospace; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation">
+<svg viewBox="0 0 390 560" style="position: absolute; left: 0; top: 0; width: 390px; height: 560px" aria-hidden="true">
 <defs>
 <linearGradient id="bl-water" x1="0" y1="0" x2="0" y2="1">
 <stop offset="0" style="stop-color: #123450"></stop>
@@ -27,10 +27,10 @@ body{margin:0}
 </linearGradient>
 <filter id="bl-halo" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"></feGaussianBlur></filter>
 </defs>
-<rect x="0" y="0" width="390" height="300" style="fill: url(#bl-water)"></rect>
+<rect x="0" y="0" width="390" height="560" style="fill: url(#bl-water)"></rect>
 <g ref="{{swayRef}}">
 <g ref="{{bodyRef}}">
-<svg x="135" y="12" width="120" height="190" viewBox="0 0 240 380" style="overflow: visible">
+<svg x="105" y="70" width="180" height="285" viewBox="0 0 240 380" style="overflow: visible">
 <ellipse ref="{{haloRef}}" cx="120" cy="125" rx="90" ry="80" filter="url(#bl-halo)" style="fill: {{bodyColor}}; opacity: 0.15"></ellipse>
 <path ref="{{tentRef}}" d="M 0 0" style="fill: none; stroke: {{bodyColor}}; stroke-opacity: 0.55; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round"></path>
 <path ref="{{bellRef}}" d="M 0 0" style="fill: url(#bl-bellfill); stroke: {{bodyColor}}; stroke-width: 3; stroke-linejoin: round"></path>
@@ -40,56 +40,32 @@ body{margin:0}
 </g>
 </g>
 </svg>
-<div style="position: absolute; left: 0; right: 0; top: 236px; display: flex; flex-direction: column; align-items: center; gap: 8px">
-<div style="position: relative; width: 300px; height: 28px">
-<div ref="{{cueInRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; opacity: 0">Breathe in</div>
-<div ref="{{cueOutRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; opacity: 0">Breathe out</div>
-<div ref="{{cueRestRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; color: #B7C7D1; opacity: 0">Glide</div>
-<div ref="{{cueStartRef}}" style="position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; opacity: 1">Turn on the mic to begin</div>
+<div ref="{{promptRef}}" style="position: absolute; left: 0; right: 0; top: 500px; text-align: center; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px">Hold to breathe out</div>
+<div style="position: absolute; left: 0; right: 0; top: 560px; bottom: 0; padding: 14px 20px 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid rgba(232,241,242,0.1); background: #071320">
+<div style="display: flex; justify-content: space-between; font-size: 12px">
+<div>Heard <span ref="{{heardRef}}" style="color: #9FB3BF">nothing</span></div>
+<div>Jellyfish <span ref="{{stateRef}}" style="color: #9FB3BF">resting</span></div>
 </div>
-<div style="width: 180px; height: 4px; border-radius: 2px; background: rgba(232,241,242,0.12); overflow: hidden">
-<div ref="{{swellRef}}" style="width: 180px; height: 4px; border-radius: 2px; background: {{bodyColor}}; transform-origin: center; transform: scaleX(0.12)"></div>
-</div>
-</div>
-<div style="position: absolute; left: 0; right: 0; top: 300px; bottom: 0; padding: 10px 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(232,241,242,0.1); background: #071320">
-<div style="display: flex; gap: 8px; align-items: center">
-<button type="button" onClick="{{onMicToggle}}" style="min-height: 30px; padding: 4px 12px; border-radius: 8px; border: 1px solid {{micBtnRing}}; background: {{micBtnFill}}; color: #E8F1F2; font-family: inherit; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer">{{micLabel}}</button>
-<button type="button" onClick="{{onRecalibrate}}" style="min-height: 30px; padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(232,241,242,0.25); background: transparent; color: #E8F1F2; font-family: inherit; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer">Recalibrate</button>
-<label style="margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #B7C7D1; cursor: pointer"><input type="checkbox" checked="{{keepCues}}" onChange="{{onKeepCues}}" style="width: 16px; height: 16px; margin: 0; accent-color: {{bodyColor}}">Cues after</label>
-</div>
-<div style="display: flex; align-items: center; gap: 10px">
-<label for="bl-bpm" style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #B7C7D1; white-space: nowrap">Cue rhythm</label>
-<input id="bl-bpm" type="range" min="3" max="14" step="0.5" value="{{bpm}}" onChange="{{onBpm}}" style="flex-grow: 1; height: 24px; margin: 0; accent-color: {{bodyColor}}">
-<div style="font-size: 11px; width: 64px; text-align: right">{{bpmLabel}}</div>
-</div>
-<div ref="{{statusRef}}" style="font-size: 11px; line-height: 1.45; min-height: 32px; white-space: pre-line; color: #E8F1F2">Microphone off</div>
 <div style="display: flex; align-items: center; gap: 8px">
-<div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #9FB3BF; width: 34px">Level</div>
+<div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #9FB3BF; width: 34px">Mic</div>
 <div style="position: relative; flex-grow: 1; height: 8px; border-radius: 4px; background: rgba(232,241,242,0.12); overflow: hidden">
 <div ref="{{lvlRef}}" style="position: absolute; left: 0; top: 0; width: 100%; height: 8px; background: #E8F1F2; transform-origin: left center; transform: scaleX(0)"></div>
-<div ref="{{thrRef}}" style="position: absolute; top: 0; left: 27%; width: 2px; height: 8px; background: #F4A259"></div>
+<div ref="{{thrRef}}" style="position: absolute; top: 0; left: 16%; width: 2px; height: 8px; background: #F4A259"></div>
 </div>
-<div ref="{{lvlTxtRef}}" style="font-size: 10px; width: 56px; text-align: right; color: #B7C7D1">-- dB</div>
+<button type="button" onClick="{{onMicToggle}}" style="min-height: 30px; padding: 4px 10px; border-radius: 8px; border: 1px solid {{micBtnRing}}; background: {{micBtnFill}}; color: #E8F1F2; font-family: inherit; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; touch-action: manipulation">{{micLabel}}</button>
 </div>
-<canvas ref="{{tlRef}}" width="716" height="268" style="width: 358px; height: 134px; border-radius: 6px; background: #050E18"></canvas>
-<div style="display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 10px; color: #9FB3BF">
-<span><span style="color: #B9A7F0">■</span> inhale</span>
-<span><span style="color: #8FD3E8">■</span> exhale</span>
-<span><span style="color: #6B7C88">■</span> ignored</span>
-<span><span style="color: #F4A259">—</span> threshold</span>
-<span>bottom strip: cue on screen</span>
-</div>
-<div style="display: flex; gap: 10px; min-height: 0">
-<canvas ref="{{fpRef}}" width="300" height="300" style="width: 150px; height: 150px; flex: none; border-radius: 6px; background: #050E18"></canvas>
-<div ref="{{tableRef}}" style="flex-grow: 1; font-size: 10px; line-height: 1.5; white-space: pre; overflow: hidden; color: #CFDCE3"></div>
+<div ref="{{statusRef}}" style="font-size: 11px; line-height: 1.45; min-height: 32px; white-space: pre-line; color: #B7C7D1">Microphone off · use the button</div>
+<div style="display: flex; justify-content: center; align-items: center; gap: 18px">
+<button type="button" aria-label="Hold while you breathe out and through the glide; release to breathe in" onPointerDown="{{onPress}}" onPointerUp="{{onRelease}}" onPointerCancel="{{onRelease}}" onContextMenu="{{onNoMenu}}" onKeyDown="{{onKeyDown}}" onKeyUp="{{onKeyUp}}" style="width: 104px; height: 104px; border-radius: 52px; border: 2px solid {{btnRing}}; background: {{btnFill}}; color: #E8F1F2; font-family: inherit; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1.35; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none">{{btnText}}</button>
+<button type="button" onClick="{{onRecalibrate}}" style="min-height: 30px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(232,241,242,0.25); background: transparent; color: #E8F1F2; font-family: inherit; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; touch-action: manipulation">Restart</button>
 </div>
 </div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"micThreshold":{"editor":"range","default":8,"min":3,"max":20,"step":0.5,"unit":"dB"},"calBreaths":{"editor":"range","default":4,"min":2,"max":10,"step":1,"unit":"exhales"},"bodyColor":{"editor":"color","default":"#8FD3E8","options":["#8FD3E8","#B9A7F0","#F2A7C3","#9FE3B5"]},"$preview":{"width":390,"height":844}}'>
-// Breath lab: the jellyfish and the breath identification from Swell, with nothing else, plus the instruments for
-// tuning breath ID: a live level trace against the threshold, every detected sound against the cue that was on
-// screen, a table of recent sounds (features, cue, live and final labels) and the sounds plotted by their features.
+// Breath lab: the jellyfish and the breath identification from Swell, with nothing else. No cues: just whether a
+// breath reliably registers and drives the jellyfish. The button: press = breathe out, hold through the glide,
+// release = breathe in.
 class Component extends DCLogic {
   ref(name) {
     this._refs = this._refs || {}; this._els = this._els || {};
@@ -102,7 +78,7 @@ class Component extends DCLogic {
     this.sim = {
       c: 0, v: 0, dist: 0, wave: 0, guide: 0, now: 0, phase: 'start', t0: null,
       holding: false, kicks: 0, queue: [], curLeft: 0, ph: 0, resting: true, inPow: false,
-      rate: null, steady: 0, steadyShown: 0, presses: [], hist: [], trace: []
+      rate: null, steady: 0, steadyShown: 0, presses: [], hist: []
     };
   }
   componentDidMount() {
@@ -112,7 +88,6 @@ class Component extends DCLogic {
     this._raf = requestAnimationFrame(loop);
   }
   componentWillUnmount() { cancelAnimationFrame(this._raf); this.stopMic(); }
-  cueBpm() { var st = this.state || {}; return st.bpm ?? 6; }
   recalibrate() {
     this.sim = null; this.init();
     var m = this.mic;
@@ -191,22 +166,10 @@ class Component extends DCLogic {
     });
     return best;
   }
-  cuePhaseAt(t0) {
-    var s = this.sim; if (!s || s.phase !== 'swim' || !this.cueVisible) return null;
-    var now = performance.now() / 1000, cyc = 60 / this.cueBpm();
-    return ((s.guide - (now - t0) / cyc) % 1 + 1) % 1;
-  }
-  // A sound that starts under "Breathe in" is very likely an inhale and one under "Breathe out" an exhale; the edges
-  // (just before "Breathe out", and "Glide") say nothing.
-  micCueAt(t0) {
-    var ph = this.cuePhaseAt(t0); if (ph == null) return null;
-    return ph >= 0.95 || ph < 0.33 ? 'in' : ph >= 0.36 && ph < 0.62 ? 'ex' : null;
-  }
-  // the clear middle of each cue
-  micCueCore(t0) {
-    var ph = this.cuePhaseAt(t0); if (ph == null) return null;
-    return ph >= 0.97 || ph < 0.3 ? 'in' : ph >= 0.4 && ph < 0.6 ? 'ex' : null;
-  }
+  // no cues in this lab: nothing on screen to label a sound by, so these always say nothing
+  cuePhaseAt() { return null; }
+  micCueAt() { return null; }
+  micCueCore() { return null; }
   // A breath often reaches the mic in pieces. A sound that starts within 0.5 s of the previous one ending continues
   // that breath (same label, not a new breath), unless it starts under the other breath's cue.
   micCont(ev) {
@@ -231,12 +194,10 @@ class Component extends DCLogic {
       if (stray) { var cap = m.exPeakMin != null ? m.exPeakMin - 2 : Infinity; m.guard = Math.min(cap, Math.max(m.guard || 0, ev.peak + 2)); }
     }
     else {
-      // calibrating: the session opens on "Breathe in" and waits for a sound. That first sound is an inhale, and the
-      // cues start from it, so the first cue lines up with your actual breath.
+      // calibrating: the session opens on "Breathe in" and waits for a sound. That first sound is an inhale.
       var sS = this.sim;
       if (sS && sS.phase === 'start') {
-        var cycS = 60 / this.cueBpm(), nowS = performance.now() / 1000;
-        sS.phase = 'swim'; sS.t0 = ev.t0; sS.guide = (Math.max(0, nowS - ev.t0) / cycS) % 1;
+        sS.phase = 'swim'; sS.t0 = ev.t0;
         m.anchorIn = ev.f.slice(); ev.cue = 'in'; label = 'in';
       }
       else if ((ev.core = this.micCueCore(ev.t0))) { label = ev.core; ev.cue = ev.core; }   // clearly inside a cue: the cue labels it
@@ -355,12 +316,32 @@ class Component extends DCLogic {
   inhaleStart(tEv) {
     var s = this.sim; if (!s) return;
     var now = performance.now() / 1000;
+    if (s.phase === 'start') { s.phase = 'swim'; s.t0 = tEv == null ? now : tEv; }
     s.inhaling = true; s.inhaleAt = tEv == null ? now : tEv;
   }
-  inhaleEnd() { var s = this.sim; if (!s) return; s.inhaling = false; s.inhaleEndAt = performance.now() / 1000; }
+  inhaleEnd() {
+    var s = this.sim; if (!s || !s.inhaling) return;
+    s.inhaling = false; s.inhaleEndAt = performance.now() / 1000;
+    var d = s.inhaleEndAt - s.inhaleAt;                 // how long your inhales last (opens the bell in step with them)
+    if (d > 0.4 && d < 15) s.inDurEst = s.inDurEst == null ? d : s.inDurEst + (d - s.inDurEst) * 0.4;
+  }
+  // the button: press = breathe out (the push), keep holding through the glide, release = breathe in
+  btnPress() {
+    var s = this.sim; if (!s || this.btnDown) return;
+    this.btnDown = true;
+    this.inhaleEnd(); this.breathStart();
+    this.setState({ pressed: true });
+  }
+  btnRelease() {
+    var s = this.sim; if (!s || !this.btnDown) return;
+    this.btnDown = false;
+    this.breathEnd(); this.inhaleStart();
+    this.setState({ pressed: false });
+  }
   breathStart(tEv) {
     var s = this.sim; if (!s || s.holding) return;
     var t = tEv == null ? performance.now() / 1000 : tEv;
+    if (s.phase === 'start') { s.phase = 'swim'; s.t0 = t; }
     var prev = s.presses.length ? s.presses[s.presses.length - 1] : null;
     s.holding = true;
     s.presses.push(t); if (s.presses.length > 4) s.presses.shift();
@@ -552,18 +533,13 @@ class Component extends DCLogic {
   tick(t) {
     var s = this.sim, el = this._els; if (!s || !el || !el.bellRef) return;
     var dt = s.now ? Math.min(0.05, t - s.now) : 0.016; s.now = t;
-    var m = this.mic, st = this.state || {};
+    var m = this.mic;
     var calN = this.props.calBreaths ?? 4;
     if (m) {
       this.micFrame(t, dt);
       if (m.mode === 'calibrating' && m.events.filter(function (x) { return x.label === 'ex'; }).length >= calN) this.micFinalize();
     }
-    // the cues: running during calibration, and afterwards too if "Cues after" is on
-    this.cueVisible = !!(m && s.phase === 'swim' && (m.mode === 'calibrating' || st.keepCues !== false));
-    var cyc = 60 / this.cueBpm();
-    if (s.phase !== 'start') s.guide = (s.guide + dt / cyc) % 1;
-
-    // your jellyfish: the breath clock and bell from Swell, driven by what the mic hears
+    // your jellyfish: the breath clock and bell from Swell, driven by the mic or the button
     var lastPress = s.presses.length ? s.presses[s.presses.length - 1] : -100;
     var myGap = s.rate ? 60 / s.rate : 12;
     if (!s.holding && t - lastPress > 2 * myGap) s.steady *= Math.exp(-dt / 4);
@@ -571,7 +547,7 @@ class Component extends DCLogic {
     var eRest = 0.12, eMine = s.rate == null ? eRest : Math.min(1, Math.max(0, (s.rate - 4) / 6));
     var e = eRest + (eMine - eRest) * s.steadyShown, vTop = 700;
     var impulse = this.strokeImpulse(e);
-    var P = s.per = Math.max(60 / 14, s.rate ? 60 / s.rate : cyc);
+    var P = s.per = Math.max(60 / 14, s.rate ? 60 / s.rate : 10);
     if (s.kicks > 0) {
       for (var kq = 0; kq < s.kicks; kq++) if (s.queue.length < 1) s.queue.push(impulse);
       s.kicks = 0; s.resting = false;
@@ -580,7 +556,7 @@ class Component extends DCLogic {
     var owed = s.queue.length > 0, ph = s.ph || 0, inPowNow = ph >= 0.4 && ph < 0.62;
     if (s.inhaling && !owed && (ph >= 0.62 || s.resting || s.relaxing)) { ph = 0; s.ph = 0; s.resting = false; s.relaxing = false; s.holdAt = null; }
     var hearIn = s.inhaleAt != null && t - s.inhaleAt < 3 * P;
-    var inDur = m && m.prof && m.prof.in ? m.prof.in.dur : 0.33 * P;
+    var inDur = m && m.prof && m.prof.in ? m.prof.in.dur : (s.inDurEst || 0.33 * P);
     var rate = 1 / P;
     if (owed && !inPowNow) {
       if (ph >= 0.33 && ph < 0.4) rate = Math.max(rate, (0.4 - ph) / 0.15);
@@ -609,143 +585,41 @@ class Component extends DCLogic {
     this.bellStep(s, dt, rate || 1 / P, function () { return s.queue.shift() || 0; }, e, t);
     this.drawJelly(s, { bell: el.bellRef, inner: el.innerRef, gloss: el.glossRef, tent: el.tentRef }, t, e, vTop);
     var A = 10 + 30 * e, Tr = 3 + 7 * e, wph = 2 * Math.PI * s.dist / 900;
-    el.swayRef.setAttribute('transform', 'translate(' + (A * Math.sin(wph)).toFixed(1) + ' 0) rotate(' + (Tr * Math.cos(wph)).toFixed(2) + ' 195 110)');
+    el.swayRef.setAttribute('transform', 'translate(' + (A * Math.sin(wph)).toFixed(1) + ' 0) rotate(' + (Tr * Math.cos(wph)).toFixed(2) + ' 195 230)');
     el.bodyRef.setAttribute('transform', 'translate(0 ' + this.bodyDip(s, vTop).toFixed(1) + ')');
-    // the halo shows what the mic is hearing right now: violet for an inhale, cyan for an exhale
-    var hearing = m && m.ev ? (m.ev.decided ? m.ev.label : '?') : null;
-    el.haloRef.style.fill = hearing === 'in' ? '#B9A7F0' : hearing === 'ex' ? '#8FD3E8' : hearing === 'x' ? '#6B7C88' : (this.props.bodyColor ?? '#8FD3E8');
-    el.haloRef.style.opacity = hearing ? '0.55' : '0.15';
 
-    // cues
-    var g = s.guide;
-    function win(a0, a1) { var fade = 0.04; return Math.max(0, Math.min(1, Math.min((g - a0) / fade + 1, (a1 - g) / fade + 1))); }
-    var cueOn = this.cueVisible;
-    el.cueInRef.style.opacity = cueOn ? Math.max(win(0, 0.4), g > 0.97 ? 1 : 0).toFixed(2) : '0';
-    el.cueOutRef.style.opacity = cueOn ? win(0.4, 0.65).toFixed(2) : '0';
-    el.cueRestRef.style.opacity = cueOn ? win(0.65, 0.97).toFixed(2) : '0';
-    var startTxt = !m ? (this.micErr || 'Turn on the mic to begin') : s.phase === 'start' ? 'Breathe in' : (!cueOn ? 'Breathe at your own pace' : '');
-    el.cueStartRef.style.opacity = startTxt ? '1' : '0';
-    if (startTxt && el.cueStartRef.textContent !== startTxt) el.cueStartRef.textContent = startTxt;
-    var sw = g < 0.4 ? 0.12 + 0.88 * (1 - Math.cos(Math.PI * g / 0.4)) / 2 : g < 0.65 ? 1 - 0.88 * (1 - Math.cos(Math.PI * (g - 0.4) / 0.25)) / 2 : 0.12;
-    el.swellRef.style.transform = 'scaleX(' + (cueOn ? sw : 0.12).toFixed(3) + ')';
-    el.swellRef.parentNode.style.opacity = cueOn ? '1' : '0.3';
+    // what is being heard right now (mic), or what the button says
+    var heard = m && m.ev ? (m.ev.decided ? m.ev.label : '?') : this.btnDown ? 'ex' : null;
+    if (!heard && !m && s.inhaling) heard = 'in';
+    var COL = { in: '#B9A7F0', ex: '#8FD3E8', x: '#6B7C88', '?': '#E8F1F2' };
+    el.haloRef.style.fill = heard ? COL[heard] : (this.props.bodyColor ?? '#8FD3E8');
+    el.haloRef.style.opacity = heard ? '0.55' : '0.15';
+    var hTxt = heard === 'in' ? 'inhale' : heard === 'ex' ? 'exhale' : heard === 'x' ? 'ignored sound' : heard === '?' ? 'a sound…' : 'nothing';
+    if (el.heardRef.textContent !== hTxt) { el.heardRef.textContent = hTxt; el.heardRef.style.color = heard ? COL[heard] : '#9FB3BF'; }
+    var sp = s.ph, sTxt = s.phase === 'start' ? 'waiting' : s.resting ? 'resting' : s.relaxing ? 'settling' : sp < 0.33 ? 'opening (inhale)' : sp < 0.4 ? 'open, holding' : sp < 0.5 ? 'push' : sp < 0.65 ? 'easing' : 'glide';
+    if (el.stateRef.textContent !== sTxt) el.stateRef.textContent = sTxt;
+    var pr = s.phase !== 'start' ? '' : m ? (m.warm >= 1 ? 'Breathe in' : 'Listening to the room…') : (this.micErr || 'Hold to breathe out');
+    el.promptRef.style.opacity = pr ? '1' : '0';
+    if (pr && el.promptRef.textContent !== pr) el.promptRef.textContent = pr;
 
-    // ---------- instruments ----------
+    // mic level against the threshold
     var onT = this.micOnThreshold();
-    var cueLab = cueOn ? (g >= 0.97 || g < 0.4 ? 'in' : g < 0.65 ? 'ex' : 'glide') : null;
-    if (m && m.warm >= 1) {
-      s.trace.push({ t: t, rel: m.rel, thr: onT, cue: cueLab });
-      while (s.trace.length && s.trace[0].t < t - 32) s.trace.shift();
-    }
     el.lvlRef.style.transform = 'scaleX(' + (m ? Math.max(0, Math.min(1, m.rel / 50)) : 0).toFixed(3) + ')';
-    el.lvlRef.style.background = hearing === 'in' ? '#B9A7F0' : hearing === 'ex' ? '#8FD3E8' : '#E8F1F2';
+    el.lvlRef.style.background = heard && m ? COL[heard] : '#E8F1F2';
     el.thrRef.style.left = (Math.min(1, onT / 50) * 100).toFixed(1) + '%';
-    var lt = m ? m.rel.toFixed(1) + ' dB' : '-- dB';
-    if (el.lvlTxtRef.textContent !== lt) el.lvlTxtRef.textContent = lt;
     var stt = this.labStatus();
     if (el.statusRef.textContent !== stt) el.statusRef.textContent = stt;
-    s.drawAcc = (s.drawAcc || 0) + dt;
-    if (s.drawAcc >= 1 / 30) { s.drawAcc = 0; this.drawTimeline(t); this.drawFeatures(); this.drawTable(); }
   }
   labStatus() {
-    var m = this.mic; if (!m) return this.micErr || 'Microphone off';
-    var lag = Math.round(m.lag * 1000) + ' ms lag' + (m.inLat == null ? ' (est.)' : '');
+    var m = this.mic; if (!m) return this.micErr || 'Microphone off · use the button';
     if (m.warm == null || m.warm < 1) return 'Listening to the room…';
     var calN = this.props.calBreaths ?? 4;
     if (m.mode === 'calibrating') {
       var ne = m.events.filter(function (x) { return x.label === 'ex'; }).length, ni = m.events.filter(function (x) { return x.label === 'in'; }).length;
-      return 'Calibrating · breathe with the cue · exhales ' + ne + ' / ' + calN + ' · inhales ' + ni + '\n' + lag;
+      return 'Calibrating · exhales ' + ne + ' / ' + calN + ' · inhales ' + ni;
     }
-    if (m.mode === 'both') {
-      var Pe = m.prof.ex, Pi = m.prof.in;
-      return 'Inhales + exhales' + (m.byCue ? ' (labelled by cue: they sound alike)' : '') + ' · ' + lag +
-        '\nex ' + Pe.mu[0].toFixed(1) + ' dB · ' + Math.round(Math.pow(2, Pe.mu[1])) + ' Hz   in ' + Pi.mu[0].toFixed(1) + ' dB · ' + Math.round(Math.pow(2, Pi.mu[1])) + ' Hz';
-    }
-    var nx = m.events.filter(function (x) { return x.label === 'x'; }).length;
-    return 'Exhales only' + (m.guard != null ? ' · guard ' + m.guard.toFixed(1) + ' dB' : '') + (nx ? ' · ' + nx + ' ignored' : '') + (m.warn ? ' (' + m.warn + ')' : '') + ' · ' + lag +
-      '\nex ' + m.prof.ex.mu[0].toFixed(1) + ' dB · ' + Math.round(Math.pow(2, m.prof.ex.mu[1])) + ' Hz · inhales between exhales ' + Math.round((m.alt || 0) * 100) + '%';
-  }
-  // last 30 s: the level above the room's floor, the threshold, each detected sound as a band coloured by its label
-  // (thin top edge = the live label, if it changed), and the cue that was on screen along the bottom
-  drawTimeline(t) {
-    var cv = this._els.tlRef; if (!cv) return;
-    var cx = cv.getContext('2d'), W = cv.width, H = cv.height, k = 2, span = 30, s = this.sim, m = this.mic;
-    cx.clearRect(0, 0, W, H);
-    var top = 8 * k, bot = H - 16 * k, cueY = H - 10 * k;
-    function X(tt) { return W * (1 - (t - tt) / span); }
-    function Y(db) { return bot - (bot - top) * Math.max(0, Math.min(1, db / 50)); }
-    var COL = { in: '#B9A7F0', ex: '#8FD3E8', x: '#6B7C88', glide: '#3A4B57' };
-    // seconds grid
-    cx.strokeStyle = 'rgba(232,241,242,0.06)'; cx.lineWidth = 1;
-    for (var sg = Math.ceil(t - span); sg <= t; sg++) if (sg % 5 === 0) { cx.beginPath(); cx.moveTo(X(sg), top); cx.lineTo(X(sg), bot); cx.stroke(); }
-    // cue strip
-    var tr = s.trace;
-    for (var i = 1; i < tr.length; i++) {
-      if (!tr[i].cue) continue;
-      cx.fillStyle = tr[i].cue === 'in' ? 'rgba(185,167,240,0.55)' : tr[i].cue === 'ex' ? 'rgba(143,211,232,0.55)' : 'rgba(58,75,87,0.6)';
-      cx.fillRect(X(tr[i - 1].t), cueY, X(tr[i].t) - X(tr[i - 1].t) + 0.5, 7 * k);
-    }
-    // detected sounds
-    if (m) m.log.forEach(function (r) {
-      var x0 = X(r.t0), x1 = X(r.t0 + r.dur); if (x1 < 0) return;
-      cx.fillStyle = COL[r.label] || '#E8F1F2';
-      cx.globalAlpha = r.cont ? 0.12 : r.short ? 0.1 : 0.22; cx.fillRect(x0, top, x1 - x0, bot - top);
-      cx.globalAlpha = 1; cx.fillRect(x0, top, Math.max(2, x1 - x0), 3 * k);
-      if (r.live && r.live !== r.label) { cx.fillStyle = COL[r.live]; cx.fillRect(x0, top + 3 * k, Math.max(2, x1 - x0), 2 * k); }
-      cx.fillStyle = '#E8F1F2'; cx.font = (9 * k) + 'px IBM Plex Mono, monospace';
-      if (!r.cont && x1 - x0 > 14 * k) cx.fillText(r.label === 'in' ? 'in' : r.label === 'ex' ? 'ex' : r.label, x0 + 3 * k, top + 13 * k);
-    });
-    if (m && m.ev) { var xe = X(m.ev.t0); cx.fillStyle = 'rgba(232,241,242,0.12)'; cx.fillRect(xe, top, W - xe, bot - top); }
-    // threshold and level
-    cx.strokeStyle = '#F4A259'; cx.lineWidth = 1.5 * k / 2; cx.beginPath();
-    tr.forEach(function (p2, j) { var xx = X(p2.t), yy = Y(p2.thr); if (j) cx.lineTo(xx, yy); else cx.moveTo(xx, yy); }); cx.stroke();
-    cx.strokeStyle = '#E8F1F2'; cx.lineWidth = 1.2 * k; cx.beginPath();
-    tr.forEach(function (p2, j) { var xx = X(p2.t), yy = Y(p2.rel); if (j) cx.lineTo(xx, yy); else cx.moveTo(xx, yy); }); cx.stroke();
-    cx.fillStyle = '#6B7C88'; cx.font = (9 * k) + 'px IBM Plex Mono, monospace';
-    cx.fillText('50 dB', 4 * k, top + 8 * k); cx.fillText('-30 s', 4 * k, bot - 3 * k); cx.fillText('now', W - 22 * k, bot - 3 * k);
-  }
-  // every sound by its two features: level (dB above the room) across, brightness (spectral centroid) up
-  drawFeatures() {
-    var cv = this._els.fpRef; if (!cv) return;
-    var cx = cv.getContext('2d'), W = cv.width, H = cv.height, k = 2, m = this.mic;
-    cx.clearRect(0, 0, W, H);
-    var L = 16 * k, R = W - 6 * k, Tp = 6 * k, B = H - 16 * k;
-    function X(db) { return L + (R - L) * Math.max(0, Math.min(1, db / 50)); }
-    function Y(l2) { return B - (B - Tp) * Math.max(0, Math.min(1, (l2 - 7) / 5)); }   // 128 Hz .. 4 kHz
-    cx.strokeStyle = 'rgba(232,241,242,0.15)'; cx.lineWidth = 1; cx.strokeRect(L, Tp, R - L, B - Tp);
-    cx.fillStyle = '#6B7C88'; cx.font = (8 * k) + 'px IBM Plex Mono, monospace';
-    cx.fillText('level →', L + 2 * k, H - 4 * k); cx.save(); cx.translate(10 * k, B - 2 * k); cx.rotate(-Math.PI / 2); cx.fillText('bright →', 0, 0); cx.restore();
-    if (!m) return;
-    var COL = { in: '#B9A7F0', ex: '#8FD3E8', x: '#6B7C88' };
-    if (m.prof) Object.keys(m.prof).forEach(function (kk) {
-      var Pp = m.prof[kk]; cx.strokeStyle = COL[kk]; cx.globalAlpha = 0.6; cx.lineWidth = 1.5;
-      cx.beginPath(); cx.ellipse(X(Pp.mu[0]), Y(Pp.mu[1]), Math.abs(X(Pp.mu[0] + Pp.sd[0]) - X(Pp.mu[0])), Math.abs(Y(Pp.mu[1] + Pp.sd[1]) - Y(Pp.mu[1])), 0, 0, 2 * Math.PI); cx.stroke();
-      cx.globalAlpha = 1;
-    });
-    m.log.forEach(function (r) {
-      if (!r.f || r.cont) return;
-      var x = X(r.f[0]), y = Y(r.f[1]);
-      cx.fillStyle = COL[r.label] || '#E8F1F2'; cx.globalAlpha = r.short ? 0.35 : 0.9;
-      cx.beginPath(); cx.arc(x, y, 3.2 * k, 0, 2 * Math.PI); cx.fill(); cx.globalAlpha = 1;
-      if (r.cue) { cx.strokeStyle = r.cue === 'in' ? '#B9A7F0' : '#8FD3E8'; cx.lineWidth = 1.2 * k; cx.beginPath(); cx.arc(x, y, 5.6 * k, 0, 2 * Math.PI); cx.stroke(); }
-    });
-  }
-  // recent sounds, newest first: when, how long, level, brightness, the cue it began under, the live label and the
-  // label it holds now (calibration's re-sort can change it)
-  drawTable() {
-    var el = this._els.tableRef; if (!el) return;
-    var m = this.mic, s = this.sim;
-    if (!m || !m.log.length) { if (el.textContent !== 'No sounds yet') el.textContent = 'No sounds yet'; return; }
-    var t0 = s.t0 || m.log[0].t0;
-    var rows = ['   t   dur  lvl   Hz  cue  label'];
-    m.log.slice(-9).reverse().forEach(function (r) {
-      var lab = r.cont ? '+ cont' : r.live && r.live !== r.label ? r.live + '→' + r.label : r.label;
-      if (r.short && !r.cont) lab += ' (short)';
-      var hz = r.f ? Math.round(Math.pow(2, r.f[1])) : 0;
-      rows.push(((r.t0 - t0).toFixed(1)).padStart(5) + ' ' + r.dur.toFixed(1).padStart(4) + ' ' + (r.f ? r.f[0].toFixed(0) : '-').padStart(4) + ' ' + String(hz).padStart(4) + '  ' + (r.core ? r.core.toUpperCase() : r.cue || ' - ').padEnd(3) + '  ' + lab);
-    });
-    var txt = rows.join('\n');
-    if (el.textContent !== txt) el.textContent = txt;
+    if (m.mode === 'both') return 'Calibrated · hearing inhales and exhales';
+    return 'Calibrated · hearing exhales only' + (m.warn ? ' (' + m.warn + ')' : '');
   }
 
   renderVals() {
@@ -753,20 +627,23 @@ class Component extends DCLogic {
     var self = this, st = this.state || {};
     var bodyColor = this.props.bodyColor ?? '#8FD3E8';
     var vals = {};
-    ['swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'cueInRef', 'cueOutRef', 'cueRestRef', 'cueStartRef', 'swellRef',
-      'statusRef', 'lvlRef', 'thrRef', 'lvlTxtRef', 'tlRef', 'fpRef', 'tableRef'].forEach(function (nm) { vals[nm] = self.ref(nm); });
+    ['swayRef', 'bodyRef', 'haloRef', 'tentRef', 'bellRef', 'innerRef', 'glossRef', 'promptRef', 'heardRef', 'stateRef',
+      'statusRef', 'lvlRef', 'thrRef'].forEach(function (nm) { vals[nm] = self.ref(nm); });
     return Object.assign(vals, {
       bodyColor: bodyColor,
-      bpm: this.cueBpm(),
-      bpmLabel: this.cueBpm() + ' / min',
-      onBpm: function (ev) { self.setState({ bpm: Number(ev.target.value) }); },
-      keepCues: st.keepCues !== false,
-      onKeepCues: function (ev) { self.setState({ keepCues: ev.target.checked }); },
-      micLabel: st.mic ? 'Stop mic' : 'Start mic',
+      micLabel: st.mic ? 'Mic on' : 'Mic off',
       micBtnRing: st.mic ? bodyColor : 'rgba(232,241,242,0.25)',
       micBtnFill: st.mic ? 'rgba(143,211,232,0.18)' : 'transparent',
       onMicToggle: function () { self.setMic(!st.mic); },
-      onRecalibrate: function () { self.recalibrate(); }
+      onRecalibrate: function () { self.btnDown = false; self.recalibrate(); self.setState({ pressed: false }); },
+      onPress: function (ev) { if (ev && ev.preventDefault) ev.preventDefault(); if (ev && ev.target && ev.target.setPointerCapture && ev.pointerId != null) { try { ev.target.setPointerCapture(ev.pointerId); } catch (e2) {} } self.btnPress(); },
+      onRelease: function () { self.btnRelease(); },
+      onNoMenu: function (ev) { if (ev && ev.preventDefault) ev.preventDefault(); },
+      onKeyDown: function (ev) { if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); if (!ev.repeat) self.btnPress(); } },
+      onKeyUp: function (ev) { if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); self.btnRelease(); } },
+      btnText: st.pressed ? 'Breathing out' : 'Hold to breathe out',
+      btnFill: st.pressed ? 'rgba(143,211,232,0.32)' : 'rgba(232,241,242,0.06)',
+      btnRing: st.pressed ? bodyColor : 'rgba(232,241,242,0.3)'
     });
   }
 }
